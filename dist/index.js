@@ -1,2 +1,7 @@
-console.log("Hello World");
-export {};
+const name = "";
+if (name) {
+    console.log(name);
+} else {
+    console.log("No name");
+}
+
