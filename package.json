@@ -4,7 +4,8 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "dev": "tsx --watch src/index.ts"
+    "dev": "tsx --watch src/index.ts",
+    "postinstall": "prisma skills sync || exit 0"
   },
   "engines": {
     "node": ">=24.0.0"
@@ -28,6 +29,7 @@
     "eslint-plugin-simple-import-sort": "^14.0.0",
     "globals": "^17.13.0",
     "prettier": "^3.9.9",
+    "prisma": "8.0.0-rc.22",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "typescript-eslint": "^8.71.1"
@@ -35,6 +37,8 @@
   "dependencies": {
     "@fastify/swagger": "^9.9.2",
     "@fastify/swagger-ui": "^6.1.2",
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
     "dotenv": "^18.0.6",
     "fastify": "^5.12.5",
     "fastify-type-provider-zod": "^7.0.0",
