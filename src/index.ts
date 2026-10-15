@@ -11,6 +11,7 @@ import fastifySwaggerUI from '@fastify/swagger-ui';
 import { auth } from "./lib/auth";
 import { fromNodeHeaders } from "better-auth/node";
 import fastifyCors from '@fastify/cors';
+import fastifyApiReference from '@scalar/fastify-api-reference';
 
 const app = Fastify({
   logger: true
@@ -48,6 +49,35 @@ app.route({
   }
 });
 
+await app.register(fastifyApiReference, {
+  routePrefix: '/docs',
+  configuration: {
+    sources: [
+      {
+        title: 'Gestão de projetos API',
+        slug: 'gestao-de-projetos-api',
+        url: '/swagger.json',
+      },
+      {
+        title: 'Auth API',
+        slug: 'auth-api',
+        url: '/api/auth/open-api/generate-schema '
+      }
+    ]
+  }
+});
+
+app.withTypeProvider<ZodTypeProvider>().route({
+  method: 'GET',
+  url: '/swagger.json',
+  schema: {
+    hide: true,
+  },
+  handler: () => {
+    return app.swagger();
+  }
+});
+
 await app.register(fastifySwagger, {
   openapi: {
     info: {
@@ -63,9 +93,6 @@ await app.register(fastifySwagger, {
   transform: jsonSchemaTransform,
 });
 
-await app.register(fastifySwaggerUI, {
-  routePrefix: '/docs',
-});
 
 await app.register(fastifyCors, {
   origin: 'http://localhost:3000',
