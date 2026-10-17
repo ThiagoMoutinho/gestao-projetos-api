@@ -1,0 +1,20 @@
+---
+description: Regras de negócio do Escritório de Projetos IGEPPS
+alwaysApply: true
+---
+
+# IGEPPS — projetos
+
+- Dono principal: `projects.ownerId` → `user.id`. Sempre existe participação `DONO_PROJETO`.
+- Funções de projeto: `DONO_PROJETO`, `GESTOR`, `PO`, `DESENVOLVEDOR`, `RESPONSAVEL_TECNICO`, `FORNECEDOR`, `OBSERVADOR`.
+- Mesmo usuário pode ter várias funções; a mesma função no mesmo projeto é `409`.
+- `glpiTicketId` só armazena o chamado. Sem integração GLPI por enquanto.
+- Cadastro: `ADMIN` e `PMO`. COORDENADOR consulta e gerencia, não cadastra.
+- GESTOR vê/gerencia só se for dono ou tiver `DONO_PROJETO`/`GESTOR` no projeto.
+- A `DONO_PROJETO` do titular não se remove nem se altera por endpoint de membro; use transferência de `ownerId`.
+
+```ts
+if (isProtectedOwnerMembership(project.ownerId, member.userId, member.role)) {
+  throw new HttpError(409, "O dono principal não pode ser removido enquanto for titular do projeto.", "PROJECT_OWNER_MEMBER_PROTECTED");
+}
+```

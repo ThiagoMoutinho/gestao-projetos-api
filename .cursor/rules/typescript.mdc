@@ -1,0 +1,28 @@
+---
+description: Convenções TypeScript do backend
+globs: gestao-projetos-api/**/*.ts
+alwaysApply: false
+---
+
+# TypeScript
+
+- `strict` ligado. Prefira `import type` para tipos.
+- Infira DTO de Zod quando o contrato for HTTP; mantenha mappers em `dtos/`.
+- Erros de domínio/HTTP: `HttpError(status, message, code)`.
+- `request.authUser` é opcional; use `getAuthUser(request)` após `requireAuth`.
+
+```ts
+// ❌ BAD
+function handle(req: any) {
+  return req.authUser.id;
+}
+
+// ✅ GOOD
+function handle(request: FastifyRequest) {
+  const actor = getAuthUser(request);
+  return actor.id;
+}
+```
+
+- Não use `any`. Evite `as` salvo borda de driver/DB.
+- Nomes em inglês no código; mensagens de API em português.

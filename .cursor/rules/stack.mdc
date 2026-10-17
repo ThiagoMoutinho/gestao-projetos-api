@@ -1,0 +1,26 @@
+---
+description: Stack tecnológica do backend IGEPPS
+alwaysApply: true
+---
+
+# Stack
+
+- Backend: Node.js 24+, TypeScript, Fastify, Zod, PostgreSQL 16, Drizzle ORM, Better Auth.
+- Documentação: `@fastify/swagger` + Scalar.
+- Pacote do app: `gestao-projetos-api`.
+
+```ts
+// ❌ BAD
+import { PrismaClient } from "@prisma/client";
+await prisma.project.findMany();
+
+// ✅ GOOD
+import { eq } from "drizzle-orm";
+import { db } from "../db";
+import { projects } from "../db/schema";
+await db.select().from(projects).where(eq(projects.ownerId, userId));
+```
+
+- Não instale Prisma, `@prisma/client` nem gere `schema.prisma`.
+- Preserve Better Auth, `emailAndPassword.disableSignUp: true` e `user.role` com `input: false`.
+- Validação HTTP com Zod no schema da rota Fastify, nunca só no frontend.

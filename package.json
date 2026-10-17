@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --watch src/index.ts",
+    "test": "tsx --test src/modules/projects/**/*.test.ts",
+    "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",

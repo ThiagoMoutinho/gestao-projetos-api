@@ -1,0 +1,23 @@
+---
+description: Segurança, sessão e autorização IGEPPS
+alwaysApply: true
+---
+
+# Segurança
+
+- Toda rota de negócio exige sessão Better Auth no backend.
+- Perfis globais: `ADMIN`, `PMO`, `COORDENADOR`, `GESTOR`, `FORNECEDOR`, `COLABORADOR`.
+- Políticas ficam em `*.authorization.ts` e são testadas.
+- FORNECEDOR e COLABORADOR não consultam projeto sem vínculo (dono ou participante).
+- Endpoints de projeto nunca alteram `user.role`.
+
+```ts
+// ❌ BAD
+if (request.headers["x-role"] === "ADMIN") { /* libera */ }
+
+// ✅ GOOD
+const actor = getAuthUser(request);
+if (!canViewProject({ globalRole: actor.role, userId: actor.id, ownerId, memberRoles })) {
+  throw new HttpError(403, "Você não tem permissão para consultar este projeto.", "PROJECT_FORBIDDEN");
+}
+```

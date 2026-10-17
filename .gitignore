@@ -1,4 +1,16 @@
-node_modules
+# Variáveis de ambiente
 .env
+.env.*
+!.env.example
+
+# Backups do PostgreSQL
+*.dump
+*.backup
+*.sql.gz
+
+# Dependências
 node_modules/
+
 dist/
+coverage/
+tasks/

@@ -1,10 +1,8 @@
 import { relations } from "drizzle-orm";
-import {
-  integer,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
+export * from "./schema/auth-schema";
+export * from "./schema/projects";
 
 export const users = pgTable("users", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

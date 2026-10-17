@@ -1,0 +1,25 @@
+---
+description: Drizzle ORM e migrations
+globs: gestao-projetos-api/{src/db/**,drizzle/**,drizzle.config.ts}
+alwaysApply: false
+---
+
+# Drizzle
+
+- Schema em `src/db/schema`. Acesso a dados só via Drizzle no repository.
+- Criação de projeto e transferência de dono usam `db.transaction`.
+- Unique de participante: `(project_id, user_id, role)`.
+- Não altere `user`, `session`, `account`, `verification` sem autorização.
+- Não apague tabelas nem migrations aplicadas. Não rode `db:migrate` / `db:push` sozinho.
+
+```ts
+// ❌ BAD — duas escritas sem transação
+await db.insert(projects).values(project);
+await db.insert(projectMembers).values(ownerMember);
+
+// ✅ GOOD
+await db.transaction(async (tx) => {
+  await tx.insert(projects).values(project);
+  await tx.insert(projectMembers).values(ownerMember);
+});
+```

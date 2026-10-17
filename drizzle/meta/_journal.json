@@ -8,6 +8,34 @@
       "when": 1791919030479,
       "tag": "0000_abandoned_wild_child",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792193489585,
+      "tag": "0001_friendly_mathemanic",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792270705368,
+      "tag": "0002_giant_morlun",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792271713952,
+      "tag": "0003_old_jubilee",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792272240555,
+      "tag": "0004_watery_spencer_smythe",
+      "breakpoints": true
     }
   ]
 }

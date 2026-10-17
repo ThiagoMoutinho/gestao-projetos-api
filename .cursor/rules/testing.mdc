@@ -1,0 +1,25 @@
+---
+description: Padrões de teste do backend
+globs: gestao-projetos-api/**/*.test.ts
+alwaysApply: false
+---
+
+# Testes
+
+- Runner: `node:test` via `tsx --test`. Sem framework extra.
+- Policies: funções puras de autorização.
+- Use cases: repositórios in-memory, sem Postgres.
+- Preserve mensagens e `code` dos `HttpError` existentes.
+
+```ts
+// ❌ BAD
+await createProject(actor, input); // sem assert de permissão
+
+// ✅ GOOD
+await assert.rejects(
+  () => getProject(actor("FORNECEDOR", "forn-1"), "project-1"),
+  (error: unknown) => error instanceof HttpError && error.code === "PROJECT_FORBIDDEN",
+);
+```
+
+- Cubra ao menos cadastro, transferência de dono, membro duplicado e visibilidade de FORNECEDOR.

@@ -1,0 +1,35 @@
+---
+description: Arquitetura Controller, Use Case e Repository
+alwaysApply: true
+---
+
+# Arquitetura de módulos
+
+Cada módulo de negócio segue: Controller → Use Case → Repository.
+
+```text
+src/modules/<modulo>/
+  *.routes.ts              # registra HTTP + Zod/Swagger
+  *.controller.ts          # sessão, status HTTP, chama use case
+  schemas/                 # Zod
+  dtos/                    # contratos e mappers
+  repositories/            # Drizzle apenas
+  use-cases/               # regra de negócio
+  factories/               # composição/DI manual
+```
+
+```ts
+// ❌ BAD — SQL e HTTP no mesmo arquivo
+app.post("/projects", async (req) => db.insert(projects).values(req.body));
+
+// ✅ GOOD
+export function makeCreateProjectUseCase(deps: { repos; runInTransaction }) {
+  return async function createProject(actor, input) { /* regras */ };
+}
+```
+
+- Controller não acessa `db`.
+- Use case não importa Fastify.
+- Repository não lança regra de autorização.
+- DI por fábrica (`makeX`), sem Nest nem container.
+- Não inicie módulo novo sem pedido explícito.
