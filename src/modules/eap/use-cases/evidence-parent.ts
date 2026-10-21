@@ -7,11 +7,20 @@ export async function assertEvidenceParentInProject(
   repos: EapRepos,
   projectId: string,
   parent: {
-    [Key in keyof Pick<CreateEvidenceInput, "taskId" | "milestoneId" | "scheduleRequestId">]?:
-      | string
-      | null;
+    [Key in keyof Pick<
+      CreateEvidenceInput,
+      "phaseId" | "taskId" | "milestoneId" | "scheduleRequestId"
+    >]?: string | null;
   },
 ): Promise<EapEvidenceParentAccess | null> {
+  if (parent.phaseId) {
+    const phase = await repos.phases.findById(parent.phaseId);
+    if (!phase || phase.projectId !== projectId) {
+      throw evidenceParentNotFoundError();
+    }
+    return { createdBy: phase.createdBy, assigneeId: phase.responsibleId };
+  }
+
   if (parent.taskId) {
     const task = await repos.tasks.findById(parent.taskId);
     const phase = task ? await repos.phases.findById(task.phaseId) : null;

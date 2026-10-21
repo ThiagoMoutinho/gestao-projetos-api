@@ -24,6 +24,7 @@ export function makeCreateEvidenceUseCase(deps: {
 
       const evidence = await txRepos.evidences.create({
         id: crypto.randomUUID(),
+        phaseId: input.phaseId ?? null,
         taskId: input.taskId ?? null,
         milestoneId: input.milestoneId ?? null,
         scheduleRequestId: input.scheduleRequestId ?? null,
@@ -40,6 +41,7 @@ export function makeCreateEvidenceUseCase(deps: {
         action: "CREATE",
         summary: `Evidência "${evidence.title}" registrada.`,
         payload: {
+          phaseId: evidence.phaseId,
           taskId: evidence.taskId,
           milestoneId: evidence.milestoneId,
           scheduleRequestId: evidence.scheduleRequestId,

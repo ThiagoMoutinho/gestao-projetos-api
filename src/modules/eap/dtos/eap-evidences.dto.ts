@@ -5,6 +5,7 @@ export type EapEvidenceRow = typeof eapEvidences.$inferSelect;
 export type CreateEvidenceInput = {
   title: string;
   url: string;
+  phaseId?: string;
   taskId?: string;
   milestoneId?: string;
   scheduleRequestId?: string;
@@ -16,6 +17,7 @@ export type UpdateEvidenceInput = {
 };
 
 export type ListEvidencesQuery = {
+  phaseId?: string;
   taskId?: string;
   milestoneId?: string;
   scheduleRequestId?: string;
@@ -23,6 +25,7 @@ export type ListEvidencesQuery = {
 
 export type EapEvidenceDto = {
   id: string;
+  phaseId: string | null;
   taskId: string | null;
   milestoneId: string | null;
   scheduleRequestId: string | null;
@@ -35,6 +38,7 @@ export type EapEvidenceDto = {
 export function toEapEvidenceDto(row: EapEvidenceRow): EapEvidenceDto {
   return {
     id: row.id,
+    phaseId: row.phaseId,
     taskId: row.taskId,
     milestoneId: row.milestoneId,
     scheduleRequestId: row.scheduleRequestId,

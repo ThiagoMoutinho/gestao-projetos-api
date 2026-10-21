@@ -5,7 +5,9 @@ import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import {
   assertCanEditPhase,
   assertCanView,
+  assertValidAssignee,
   loadProjectAccess,
+  normalizeOptionalText,
   phaseNotFoundError,
 } from "./shared";
 
@@ -19,7 +21,7 @@ export function makeUpdatePhaseUseCase(deps: {
     phaseId: string,
     input: UpdatePhaseInput,
   ) {
-    const { context } = await loadProjectAccess(deps.repos, actor, projectId);
+    const { project, context } = await loadProjectAccess(deps.repos, actor, projectId);
     assertCanView(context);
 
     const current = await deps.repos.phases.findByIdAndProject(phaseId, projectId);
@@ -28,11 +30,24 @@ export function makeUpdatePhaseUseCase(deps: {
     }
     assertCanEditPhase(context, current.createdBy);
 
+    if (input.responsibleId !== undefined) {
+      await assertValidAssignee(
+        deps.repos,
+        projectId,
+        project.ownerId,
+        input.responsibleId,
+        "PHASE_RESPONSIBLE_NOT_MEMBER",
+      );
+    }
+    const completionCriteria = normalizeOptionalText(input.completionCriteria);
+
     return deps.runInTransaction(async (txRepos) => {
       const updated = await txRepos.phases.update(phaseId, projectId, {
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.status !== undefined ? { status: input.status } : {}),
+        ...(input.responsibleId !== undefined ? { responsibleId: input.responsibleId } : {}),
+        ...(completionCriteria !== undefined ? { completionCriteria } : {}),
         updatedBy: actor.id,
         updatedAt: new Date(),
       });
@@ -52,6 +67,8 @@ export function makeUpdatePhaseUseCase(deps: {
           name: input.name,
           description: input.description,
           status: input.status,
+          responsibleId: input.responsibleId,
+          completionCriteria,
         },
         actorId: actor.id,
       });

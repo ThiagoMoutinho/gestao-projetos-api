@@ -35,6 +35,8 @@ export const createPhaseBodySchema = z
     sortOrder: z.number().int().min(0).optional(),
     plannedStartAt: isoDateTimeSchema.nullable().optional(),
     plannedEndAt: isoDateTimeSchema.nullable().optional(),
+    responsibleId: z.string().min(1).nullable().optional(),
+    completionCriteria: z.string().trim().max(4000).nullable().optional(),
   })
   .strict();
 
@@ -43,6 +45,8 @@ export const updatePhaseBodySchema = z
     name: z.string().trim().min(1).max(255).optional(),
     description: z.string().trim().max(4000).nullable().optional(),
     status: eapPhaseStatusSchema.optional(),
+    responsibleId: z.string().min(1).nullable().optional(),
+    completionCriteria: z.string().trim().max(4000).nullable().optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {
@@ -69,6 +73,8 @@ export const eapPhaseSchema = z.object({
   description: z.string().nullable(),
   sortOrder: z.number().int(),
   status: eapPhaseStatusSchema,
+  responsibleId: z.string().nullable(),
+  completionCriteria: z.string().nullable(),
   baselineStartAt: z.string().nullable(),
   baselineEndAt: z.string().nullable(),
   plannedStartAt: z.string().nullable(),

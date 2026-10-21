@@ -3,6 +3,11 @@ import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { requireAuth } from "../../lib/session";
 import type { EapController } from "./eap.controller";
 import {
+  auditErrorResponses,
+  eapAuditListResponseSchema,
+  listAuditQuerySchema,
+} from "./schemas/eap-audit.schema";
+import {
   createPhaseBodySchema,
   eapPhaseListResponseSchema,
   eapPhaseSchema,
@@ -456,6 +461,25 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
         },
       },
       (request) => controller.updateEvidence(request),
+    );
+
+    app.get(
+      "/projects/:id/audit",
+      {
+        schema: {
+          operationId: "listEapAudit",
+          tags: ["EAP"],
+          summary: "Listar histórico de alterações de um item da EAP",
+          security: [{ cookieAuth: [] }],
+          params: projectIdParamsSchema,
+          querystring: listAuditQuerySchema,
+          response: {
+            200: eapAuditListResponseSchema,
+            ...auditErrorResponses,
+          },
+        },
+      },
+      (request) => controller.listAudit(request),
     );
   };
 }

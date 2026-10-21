@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 
 import type { AuthUser } from "../../lib/session";
 import { getAuthUser } from "../../lib/session";
+import type { EapAuditEntryDto, ListAuditQuery } from "./dtos/eap-audit.dto";
 import type {
   CreatePhaseInput,
   EapPhaseDto,
@@ -152,6 +153,11 @@ type EapPhaseUseCases = {
     evidenceId: string,
     input: UpdateEvidenceInput,
   ) => Promise<EapEvidenceDto>;
+  listAudit: (
+    actor: AuthUser,
+    projectId: string,
+    query: ListAuditQuery,
+  ) => Promise<{ data: EapAuditEntryDto[] }>;
 };
 
 export function makeEapController(useCases: EapPhaseUseCases) {
@@ -428,6 +434,12 @@ export function makeEapController(useCases: EapPhaseUseCases) {
         request.params.evidenceId,
         request.body,
       );
+    },
+
+    async listAudit(
+      request: FastifyRequest<{ Params: { id: string }; Querystring: ListAuditQuery }>,
+    ) {
+      return useCases.listAudit(getAuthUser(request), request.params.id, request.query);
     },
   };
 }

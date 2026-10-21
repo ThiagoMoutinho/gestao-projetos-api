@@ -1,8 +1,18 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 
-import { eapAuditLogs } from "../../../db/schema";
+import { eapAuditLogs, user } from "../../../db/schema";
 import type { DbClient } from "../../../db/types";
-import type { EapAuditRepository, NewEapAuditLogRecord } from "./contracts";
+import type {
+  EapAuditEntityFilter,
+  EapAuditRepository,
+  NewEapAuditLogRecord,
+} from "./contracts";
+
+const evidenceParentKeys: Record<string, string> = {
+  PHASE: "phaseId",
+  TASK: "taskId",
+  MILESTONE: "milestoneId",
+};
 
 export class DrizzleEapAuditRepository implements EapAuditRepository {
   constructor(private readonly client: DbClient) {}
@@ -27,5 +37,33 @@ export class DrizzleEapAuditRepository implements EapAuditRepository {
       .limit(1);
 
     return row ?? null;
+  }
+
+  async listByEntity(filter: EapAuditEntityFilter) {
+    const ownEntries = and(
+      eq(eapAuditLogs.entityType, filter.entityType),
+      eq(eapAuditLogs.entityId, filter.entityId),
+    );
+    const parentKey = evidenceParentKeys[filter.entityType];
+    const scope =
+      filter.includeEvidences && parentKey
+        ? or(
+            ownEntries,
+            and(
+              eq(eapAuditLogs.entityType, "EVIDENCE"),
+              sql`${eapAuditLogs.payload} ->> ${parentKey} = ${filter.entityId}`,
+            ),
+          )
+        : ownEntries;
+
+    const rows = await this.client
+      .select({ log: eapAuditLogs, actorName: user.name })
+      .from(eapAuditLogs)
+      .leftJoin(user, eq(eapAuditLogs.actorId, user.id))
+      .where(and(eq(eapAuditLogs.projectId, filter.projectId), scope))
+      .orderBy(desc(eapAuditLogs.createdAt), desc(eapAuditLogs.id))
+      .limit(filter.limit);
+
+    return rows.map((row) => ({ ...row.log, actorName: row.actorName }));
   }
 }

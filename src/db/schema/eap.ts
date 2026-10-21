@@ -118,6 +118,8 @@ export const eapPhases = pgTable(
     plannedEndAt: timestamp("planned_end_at"),
     actualStartAt: timestamp("actual_start_at"),
     actualEndAt: timestamp("actual_end_at"),
+    responsibleId: text("responsible_id").references(() => user.id),
+    completionCriteria: text("completion_criteria"),
     createdBy: text("created_by")
       .notNull()
       .references(() => user.id),
@@ -133,6 +135,7 @@ export const eapPhases = pgTable(
   (table) => [
     unique("eap_phases_project_sort_order_unique").on(table.projectId, table.sortOrder),
     index("eap_phases_project_id_idx").on(table.projectId),
+    index("eap_phases_responsible_id_idx").on(table.responsibleId),
     check("eap_phases_sort_order_chk", sql`${table.sortOrder} >= 0`),
     check(
       "eap_phases_planned_dates_chk",
@@ -385,6 +388,7 @@ export const eapEvidences = pgTable(
   "eap_evidences",
   {
     id: text("id").primaryKey(),
+    phaseId: text("phase_id").references(() => eapPhases.id, { onDelete: "cascade" }),
     taskId: text("task_id").references(() => eapTasks.id, { onDelete: "cascade" }),
     milestoneId: text("milestone_id").references(() => eapMilestones.id, {
       onDelete: "cascade",
@@ -401,26 +405,18 @@ export const eapEvidences = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
+    index("eap_evidences_phase_id_idx").on(table.phaseId),
     index("eap_evidences_task_id_idx").on(table.taskId),
     index("eap_evidences_milestone_id_idx").on(table.milestoneId),
     index("eap_evidences_schedule_request_id_idx").on(table.scheduleRequestId),
     check(
       "eap_evidences_exactly_one_parent_chk",
       sql`(
-        (
-          ${table.taskId} IS NOT NULL
-          AND ${table.milestoneId} IS NULL
-          AND ${table.scheduleRequestId} IS NULL
-        ) OR (
-          ${table.taskId} IS NULL
-          AND ${table.milestoneId} IS NOT NULL
-          AND ${table.scheduleRequestId} IS NULL
-        ) OR (
-          ${table.taskId} IS NULL
-          AND ${table.milestoneId} IS NULL
-          AND ${table.scheduleRequestId} IS NOT NULL
-        )
-      )`,
+        (CASE WHEN ${table.phaseId} IS NULL THEN 0 ELSE 1 END)
+        + (CASE WHEN ${table.taskId} IS NULL THEN 0 ELSE 1 END)
+        + (CASE WHEN ${table.milestoneId} IS NULL THEN 0 ELSE 1 END)
+        + (CASE WHEN ${table.scheduleRequestId} IS NULL THEN 0 ELSE 1 END)
+      ) = 1`,
     ),
   ],
 );
@@ -495,6 +491,12 @@ export const eapPhasesRelations = relations(eapPhases, ({ one, many }) => ({
   tasks: many(eapTasks),
   milestones: many(eapMilestones),
   scheduleRequests: many(eapScheduleRequests),
+  evidences: many(eapEvidences),
+  responsible: one(user, {
+    fields: [eapPhases.responsibleId],
+    references: [user.id],
+    relationName: "eap_phases_responsible",
+  }),
   createdByUser: one(user, {
     fields: [eapPhases.createdBy],
     references: [user.id],
@@ -604,6 +606,10 @@ export const eapScheduleChangesRelations = relations(eapScheduleChanges, ({ one 
 }));
 
 export const eapEvidencesRelations = relations(eapEvidences, ({ one }) => ({
+  phase: one(eapPhases, {
+    fields: [eapEvidences.phaseId],
+    references: [eapPhases.id],
+  }),
   task: one(eapTasks, {
     fields: [eapEvidences.taskId],
     references: [eapTasks.id],

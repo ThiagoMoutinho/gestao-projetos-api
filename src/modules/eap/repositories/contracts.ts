@@ -16,6 +16,8 @@ export type NewEapPhaseRecord = {
   description: string | null;
   sortOrder: number;
   status: EapPhaseRow["status"];
+  responsibleId: string | null;
+  completionCriteria: string | null;
   baselineStartAt: Date | null;
   baselineEndAt: Date | null;
   plannedStartAt: Date | null;
@@ -28,6 +30,8 @@ export type EapPhaseUpdateRecord = {
   name?: string;
   description?: string | null;
   status?: EapPhaseRow["status"];
+  responsibleId?: string | null;
+  completionCriteria?: string | null;
   sortOrder?: number;
   updatedBy: string;
   updatedAt: Date;
@@ -156,6 +160,7 @@ export interface EapMilestonesRepository {
 }
 
 export type EvidenceParentFilter = {
+  phaseId?: string;
   taskId?: string;
   milestoneId?: string;
   scheduleRequestId?: string;
@@ -163,6 +168,7 @@ export type EvidenceParentFilter = {
 
 export type NewEapEvidenceRecord = {
   id: string;
+  phaseId: string | null;
   taskId: string | null;
   milestoneId: string | null;
   scheduleRequestId: string | null;
@@ -194,7 +200,18 @@ export interface EapAuditRepository {
     entityId: string,
     action: NewEapAuditLogRecord["action"],
   ): Promise<EapAuditLogRow | null>;
+  listByEntity(filter: EapAuditEntityFilter): Promise<EapAuditEntryRow[]>;
 }
+
+export type EapAuditEntityFilter = {
+  projectId: string;
+  entityType: string;
+  entityId: string;
+  includeEvidences: boolean;
+  limit: number;
+};
+
+export type EapAuditEntryRow = EapAuditLogRow & { actorName: string | null };
 
 export type EapRepos = {
   projects: ProjectsRepository;

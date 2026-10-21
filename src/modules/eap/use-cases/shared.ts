@@ -215,6 +215,7 @@ export async function assertValidAssignee(
   projectId: string,
   ownerId: string,
   assigneeId: string | null | undefined,
+  notMemberCode = "TASK_ASSIGNEE_NOT_MEMBER",
 ) {
   if (assigneeId == null) {
     return;
@@ -234,9 +235,17 @@ export async function assertValidAssignee(
     throw new HttpError(
       400,
       "O responsável deve ser um participante habilitado do projeto.",
-      "TASK_ASSIGNEE_NOT_MEMBER",
+      notMemberCode,
     );
   }
+}
+
+export function normalizeOptionalText(value: string | null | undefined) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return value && value.length > 0 ? value : null;
 }
 
 export function parseOptionalDate(value: string | null | undefined): Date | null {

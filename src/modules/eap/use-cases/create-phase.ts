@@ -7,8 +7,10 @@ import {
   assertCanCreateItems,
   assertCanView,
   assertPlannedDates,
+  assertValidAssignee,
   duplicateSortOrderError,
   loadProjectAccess,
+  normalizeOptionalText,
   parseOptionalDate,
 } from "./shared";
 
@@ -21,13 +23,23 @@ export function makeCreatePhaseUseCase(deps: {
     projectId: string,
     input: CreatePhaseInput,
   ) {
-    const { context } = await loadProjectAccess(deps.repos, actor, projectId);
+    const { project, context } = await loadProjectAccess(deps.repos, actor, projectId);
     assertCanView(context);
     assertCanCreateItems(context);
 
     const plannedStartAt = parseOptionalDate(input.plannedStartAt);
     const plannedEndAt = parseOptionalDate(input.plannedEndAt);
     assertPlannedDates(plannedStartAt, plannedEndAt);
+
+    const responsibleId = input.responsibleId ?? null;
+    await assertValidAssignee(
+      deps.repos,
+      projectId,
+      project.ownerId,
+      responsibleId,
+      "PHASE_RESPONSIBLE_NOT_MEMBER",
+    );
+    const completionCriteria = normalizeOptionalText(input.completionCriteria) ?? null;
 
     try {
       const created = await deps.runInTransaction(async (txRepos) => {
@@ -42,6 +54,8 @@ export function makeCreatePhaseUseCase(deps: {
           description: input.description ?? null,
           sortOrder,
           status: input.status ?? "NAO_INICIADA",
+          responsibleId,
+          completionCriteria,
           plannedStartAt,
           plannedEndAt,
           baselineStartAt: plannedStartAt,
@@ -59,6 +73,8 @@ export function makeCreatePhaseUseCase(deps: {
           summary: `Fase "${phase.name}" criada.`,
           payload: {
             sortOrder: phase.sortOrder,
+            responsibleId: phase.responsibleId,
+            completionCriteria: phase.completionCriteria,
             plannedStartAt: phase.plannedStartAt?.toISOString() ?? null,
             plannedEndAt: phase.plannedEndAt?.toISOString() ?? null,
             baselineStartAt: phase.baselineStartAt?.toISOString() ?? null,

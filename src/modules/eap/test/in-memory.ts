@@ -14,6 +14,7 @@ import type { EapAuditLogRow, EapPhaseRow } from "../dtos/eap-phases.dto";
 import type { EapMilestoneRow } from "../dtos/eap-milestones.dto";
 import type { EapTaskRow } from "../dtos/eap-tasks.dto";
 import type {
+  EapAuditEntityFilter,
   EapAuditRepository,
   EapEvidencesRepository,
   EapEvidenceUpdateRecord,
@@ -366,6 +367,9 @@ class InMemoryEapEvidencesRepository implements EapEvidencesRepository {
   constructor(private readonly store: EapInMemoryStore) {}
 
   private projectIdOf(row: EapEvidenceRow) {
+    if (row.phaseId) {
+      return this.store.phases.find((item) => item.id === row.phaseId)?.projectId ?? null;
+    }
     if (row.taskId) {
       const task = this.store.tasks.find((item) => item.id === row.taskId);
       const phase = task ? this.store.phases.find((item) => item.id === task.phaseId) : null;
@@ -389,6 +393,9 @@ class InMemoryEapEvidencesRepository implements EapEvidencesRepository {
 
   private matches(row: EapEvidenceRow, projectId: string, filter: EvidenceParentFilter) {
     if (this.projectIdOf(row) !== projectId) {
+      return false;
+    }
+    if (filter.phaseId && row.phaseId !== filter.phaseId) {
       return false;
     }
     if (filter.taskId && row.taskId !== filter.taskId) {
@@ -465,6 +472,39 @@ class InMemoryEapAuditRepository implements EapAuditRepository {
         row.entityType === entityType && row.entityId === entityId && row.action === action,
     );
     return matches.at(-1) ?? null;
+  }
+
+  async listByEntity(filter: EapAuditEntityFilter) {
+    const parentKey =
+      filter.entityType === "PHASE"
+        ? "phaseId"
+        : filter.entityType === "TASK"
+          ? "taskId"
+          : filter.entityType === "MILESTONE"
+            ? "milestoneId"
+            : null;
+
+    return [...this.store.auditLogs]
+      .reverse()
+      .filter((row) => {
+        if (row.projectId !== filter.projectId) {
+          return false;
+        }
+        if (row.entityType === filter.entityType && row.entityId === filter.entityId) {
+          return true;
+        }
+        if (!filter.includeEvidences || !parentKey || row.entityType !== "EVIDENCE") {
+          return false;
+        }
+        const payload = row.payload as Record<string, unknown> | null;
+        return payload?.[parentKey] === filter.entityId;
+      })
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, filter.limit)
+      .map((row) => ({
+        ...row,
+        actorName: this.store.users.find((user) => user.id === row.actorId)?.name ?? null,
+      }));
   }
 }
 

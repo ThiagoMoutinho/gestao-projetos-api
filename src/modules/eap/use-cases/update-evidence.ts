@@ -53,6 +53,10 @@ export function makeUpdateEvidenceUseCase(deps: {
         action: "UPDATE",
         summary: `Evidência "${updated.title}" atualizada.`,
         payload: {
+          phaseId: updated.phaseId,
+          taskId: updated.taskId,
+          milestoneId: updated.milestoneId,
+          scheduleRequestId: updated.scheduleRequestId,
           title: input.title,
           url: input.url,
         },

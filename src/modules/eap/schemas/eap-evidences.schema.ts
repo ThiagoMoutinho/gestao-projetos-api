@@ -17,11 +17,12 @@ const httpUrlSchema = z
   }, "Informe um link http ou https.");
 
 function parentCount(value: {
+  phaseId?: string;
   taskId?: string;
   milestoneId?: string;
   scheduleRequestId?: string;
 }) {
-  return [value.taskId, value.milestoneId, value.scheduleRequestId].filter(
+  return [value.phaseId, value.taskId, value.milestoneId, value.scheduleRequestId].filter(
     (item) => item != null,
   ).length;
 }
@@ -33,6 +34,7 @@ export const evidenceParamsSchema = z.object({
 
 export const listEvidencesQuerySchema = z
   .object({
+    phaseId: z.string().min(1).optional(),
     taskId: z.string().min(1).optional(),
     milestoneId: z.string().min(1).optional(),
     scheduleRequestId: z.string().min(1).optional(),
@@ -46,13 +48,15 @@ export const createEvidenceBodySchema = z
   .object({
     title: z.string().trim().min(1).max(255),
     url: httpUrlSchema,
+    phaseId: z.string().min(1).optional(),
     taskId: z.string().min(1).optional(),
     milestoneId: z.string().min(1).optional(),
     scheduleRequestId: z.string().min(1).optional(),
   })
   .strict()
   .refine((value) => parentCount(value) === 1, {
-    message: "Informe exatamente um vínculo: tarefa, marco ou solicitação de reprogramação.",
+    message:
+      "Informe exatamente um vínculo: fase, tarefa, marco ou solicitação de reprogramação.",
   });
 
 export const updateEvidenceBodySchema = z
@@ -67,6 +71,7 @@ export const updateEvidenceBodySchema = z
 
 export const eapEvidenceSchema = z.object({
   id: z.string(),
+  phaseId: z.string().nullable(),
   taskId: z.string().nullable(),
   milestoneId: z.string().nullable(),
   scheduleRequestId: z.string().nullable(),

@@ -14,7 +14,7 @@ export function makeListEvidencesUseCase(deps: { repos: EapRepos }) {
     const { context } = await loadProjectAccess(deps.repos, actor, projectId);
     assertCanView(context);
 
-    if (query.taskId || query.milestoneId || query.scheduleRequestId) {
+    if (query.phaseId || query.taskId || query.milestoneId || query.scheduleRequestId) {
       await assertEvidenceParentInProject(deps.repos, projectId, query);
     }
 

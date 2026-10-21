@@ -19,6 +19,7 @@ import { makeGetEvidenceUseCase } from "../use-cases/get-evidence";
 import { makeGetMilestoneUseCase } from "../use-cases/get-milestone";
 import { makeGetPhaseUseCase } from "../use-cases/get-phase";
 import { makeGetTaskUseCase } from "../use-cases/get-task";
+import { makeListAuditUseCase } from "../use-cases/list-audit";
 import { makeListEvidencesUseCase } from "../use-cases/list-evidences";
 import { makeListMilestonesUseCase } from "../use-cases/list-milestones";
 import { makeListPhasesUseCase } from "../use-cases/list-phases";
@@ -78,5 +79,6 @@ export function makeEapModule(database: Database) {
     getEvidence: makeGetEvidenceUseCase(deps),
     createEvidence: makeCreateEvidenceUseCase(deps),
     updateEvidence: makeUpdateEvidenceUseCase(deps),
+    listAudit: makeListAuditUseCase(deps),
   });
 }

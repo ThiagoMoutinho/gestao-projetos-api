@@ -12,12 +12,14 @@ import type {
 
 const taskPhases = alias(eapPhases, "evidence_task_phases");
 const milestonePhases = alias(eapPhases, "evidence_milestone_phases");
+const ownPhases = alias(eapPhases, "evidence_own_phases");
 
 export class DrizzleEapEvidencesRepository implements EapEvidencesRepository {
   constructor(private readonly client: DbClient) {}
 
   private projectScope(projectId: string) {
     return or(
+      eq(ownPhases.projectId, projectId),
       eq(taskPhases.projectId, projectId),
       eq(milestonePhases.projectId, projectId),
       eq(eapScheduleRequests.projectId, projectId),
@@ -28,6 +30,9 @@ export class DrizzleEapEvidencesRepository implements EapEvidencesRepository {
     const conditions = [this.projectScope(projectId)];
     if (evidenceId) {
       conditions.push(eq(eapEvidences.id, evidenceId));
+    }
+    if (filter.phaseId) {
+      conditions.push(eq(eapEvidences.phaseId, filter.phaseId));
     }
     if (filter.taskId) {
       conditions.push(eq(eapEvidences.taskId, filter.taskId));
@@ -42,6 +47,7 @@ export class DrizzleEapEvidencesRepository implements EapEvidencesRepository {
     return this.client
       .select({ evidence: eapEvidences })
       .from(eapEvidences)
+      .leftJoin(ownPhases, eq(eapEvidences.phaseId, ownPhases.id))
       .leftJoin(eapTasks, eq(eapEvidences.taskId, eapTasks.id))
       .leftJoin(taskPhases, eq(eapTasks.phaseId, taskPhases.id))
       .leftJoin(eapMilestones, eq(eapEvidences.milestoneId, eapMilestones.id))
