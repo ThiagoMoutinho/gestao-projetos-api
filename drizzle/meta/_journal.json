@@ -36,6 +36,34 @@
       "when": 1792272240555,
       "tag": "0004_watery_spencer_smythe",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792277141222,
+      "tag": "0005_silly_molly_hayes",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792337720552,
+      "tag": "0006_milestone_delivered_by",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792525573500,
+      "tag": "0007_perpetual_freak",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792526461747,
+      "tag": "0008_chilly_vanisher",
+      "breakpoints": true
     }
   ]
 }

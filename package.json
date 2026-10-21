@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --watch src/index.ts",
-    "test": "tsx --test src/modules/projects/**/*.test.ts",
+    "test": "tsx --test src/modules/projects/**/*.test.ts src/modules/eap/**/*.test.ts src/http/**/*.test.ts src/scripts/demo-seed/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "bootstrap:dev-user": "tsx src/scripts/bootstrap-dev-pmo.ts",
+    "seed:demo": "tsx src/scripts/demo-seed/run.ts",
+    "seed:demo:clean": "tsx src/scripts/demo-seed/clean.ts"
   },
   "engines": {
     "node": ">=24.0.0"

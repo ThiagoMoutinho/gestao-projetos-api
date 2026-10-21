@@ -27,6 +27,7 @@ export function makeProjectsRoutes(
       "/projects",
       {
         schema: {
+          operationId: "createProject",
           tags: ["Projetos"],
           summary: "Cadastrar projeto",
           security: [{ cookieAuth: [] }],
@@ -44,6 +45,7 @@ export function makeProjectsRoutes(
       "/projects",
       {
         schema: {
+          operationId: "listProjects",
           tags: ["Projetos"],
           summary: "Listar projetos acessíveis",
           security: [{ cookieAuth: [] }],
@@ -60,6 +62,7 @@ export function makeProjectsRoutes(
       "/me/projects",
       {
         schema: {
+          operationId: "listMyProjects",
           tags: ["Me"],
           summary: "Listar projetos do usuário autenticado",
           security: [{ cookieAuth: [] }],
@@ -76,6 +79,7 @@ export function makeProjectsRoutes(
       "/projects/:id",
       {
         schema: {
+          operationId: "getProject",
           tags: ["Projetos"],
           summary: "Consultar detalhes do projeto",
           security: [{ cookieAuth: [] }],
@@ -93,6 +97,7 @@ export function makeProjectsRoutes(
       "/projects/:id",
       {
         schema: {
+          operationId: "updateProject",
           tags: ["Projetos"],
           summary: "Atualizar projeto",
           security: [{ cookieAuth: [] }],
@@ -111,6 +116,7 @@ export function makeProjectsRoutes(
       "/projects/:id/members",
       {
         schema: {
+          operationId: "listProjectMembers",
           tags: ["Participantes"],
           summary: "Listar participantes do projeto",
           security: [{ cookieAuth: [] }],
@@ -128,6 +134,7 @@ export function makeProjectsRoutes(
       "/projects/:id/members",
       {
         schema: {
+          operationId: "addProjectMember",
           tags: ["Participantes"],
           summary: "Adicionar participante",
           security: [{ cookieAuth: [] }],
@@ -146,6 +153,7 @@ export function makeProjectsRoutes(
       "/projects/:id/members/:memberId",
       {
         schema: {
+          operationId: "updateProjectMember",
           tags: ["Participantes"],
           summary: "Alterar função do participante",
           security: [{ cookieAuth: [] }],
@@ -164,6 +172,7 @@ export function makeProjectsRoutes(
       "/projects/:id/members/:memberId",
       {
         schema: {
+          operationId: "removeProjectMember",
           tags: ["Participantes"],
           summary: "Remover participante",
           security: [{ cookieAuth: [] }],
