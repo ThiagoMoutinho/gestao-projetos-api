@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireAuth } from "../../lib/session";
 import type { EapController } from "./eap.controller";
+import { importEapBodySchema, importEapResponseSchema } from "./schemas/eap-import.schema";
 import {
   auditErrorResponses,
   eapAuditListResponseSchema,
@@ -108,6 +109,27 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
         },
       },
       (request, reply) => controller.create(request, reply),
+    );
+
+    app.post(
+      "/projects/:id/eap/import",
+      {
+        schema: {
+          operationId: "importEap",
+          tags: ["EAP"],
+          summary: "Importar EAP por planilha (pré-visualização ou confirmação)",
+          description:
+            "Valida fases, tarefas e marcos da planilha e devolve os erros por linha. Com confirm=true e sem erros, grava todos os itens numa única transação.",
+          security: [{ cookieAuth: [] }],
+          params: projectIdParamsSchema,
+          body: importEapBodySchema,
+          response: {
+            200: importEapResponseSchema,
+            ...errorResponses,
+          },
+        },
+      },
+      (request) => controller.importEap(request),
     );
 
     app.patch(

@@ -40,6 +40,7 @@ import { makeReactivateTaskUseCase } from "../use-cases/reactivate-task";
 import { makeRegisterImpedimentUseCase } from "../use-cases/register-impediment";
 import { makeReorderMilestonesUseCase } from "../use-cases/reorder-milestones";
 import { makeReorderPhasesUseCase } from "../use-cases/reorder-phases";
+import { makeImportEapUseCase } from "../use-cases/import-eap";
 import { makeReorderTasksUseCase } from "../use-cases/reorder-tasks";
 import { makeResolveImpedimentUseCase } from "../use-cases/resolve-impediment";
 import { makeReviewMilestoneUseCase } from "../use-cases/review-milestone";
@@ -80,6 +81,7 @@ export function makeEapModule(database: Database) {
     createPhase: makeCreatePhaseUseCase(deps),
     updatePhase: makeUpdatePhaseUseCase(deps),
     reorderPhases: makeReorderPhasesUseCase(deps),
+    importEap: makeImportEapUseCase(deps),
     listTasks: makeListTasksUseCase(deps),
     getTask: makeGetTaskUseCase(deps),
     createTask: makeCreateTaskUseCase(deps),
