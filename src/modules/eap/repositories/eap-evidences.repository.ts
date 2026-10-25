@@ -1,4 +1,4 @@
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, isNull, lte, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { eapEvidences, eapMilestones, eapPhases, eapScheduleRequests, eapTasks } from "../../../db/schema";
@@ -76,9 +76,24 @@ export class DrizzleEapEvidencesRepository implements EapEvidencesRepository {
     const [row] = await this.client
       .update(eapEvidences)
       .set(data)
-      .where(eq(eapEvidences.id, evidenceId))
+      .where(and(eq(eapEvidences.id, evidenceId), isNull(eapEvidences.deliveryId)))
       .returning();
 
     return row ?? null;
+  }
+
+  async linkToDelivery(milestoneId: string, deliveryId: string, createdUntil?: Date) {
+    const conditions = [eq(eapEvidences.milestoneId, milestoneId), isNull(eapEvidences.deliveryId)];
+    if (createdUntil) {
+      conditions.push(lte(eapEvidences.createdAt, createdUntil));
+    }
+
+    const rows = await this.client
+      .update(eapEvidences)
+      .set({ deliveryId })
+      .where(and(...conditions))
+      .returning({ id: eapEvidences.id });
+
+    return rows.map((row) => row.id);
   }
 }

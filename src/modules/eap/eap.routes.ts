@@ -1,4 +1,5 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import { z } from "zod";
 
 import { requireAuth } from "../../lib/session";
 import type { EapController } from "./eap.controller";
@@ -27,8 +28,18 @@ import {
   updateEvidenceBodySchema,
 } from "./schemas/eap-evidences.schema";
 import {
+  eapImpedimentChangeResponseSchema,
+  eapImpedimentListResponseSchema,
+  impedimentParamsSchema,
+  registerImpedimentBodySchema,
+  resolveImpedimentBodySchema,
+  updateImpedimentBodySchema,
+} from "./schemas/eap-impediments.schema";
+import {
+  authorizeResubmissionBodySchema,
   createMilestoneBodySchema,
   deliverMilestoneBodySchema,
+  eapMilestoneDeliveryListResponseSchema,
   eapMilestoneListResponseSchema,
   eapMilestoneSchema,
   milestoneErrorResponses,
@@ -38,12 +49,22 @@ import {
   updateMilestoneBodySchema,
 } from "./schemas/eap-milestones.schema";
 import {
+  eapScheduleChangeListResponseSchema,
+  eapScheduleChangeSchema,
+  eapScheduleMonitoringSchema,
+  listScheduleChangesQuerySchema,
+  rescheduleMilestoneBodySchema,
+  rescheduleRangeBodySchema,
+  scheduleErrorResponses,
+} from "./schemas/eap-schedule.schema";
+import {
   createTaskBodySchema,
   eapTaskListResponseSchema,
   eapTaskSchema,
   reorderTasksBodySchema,
   taskErrorResponses,
   taskParamsSchema,
+  taskStatusDecisionBodySchema,
   updateTaskBodySchema,
   updateTaskProgressBodySchema,
 } from "./schemas/eap-tasks.schema";
@@ -145,6 +166,26 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
       (request) => controller.update(request),
     );
 
+    app.delete(
+      "/projects/:id/phases/:phaseId",
+      {
+        schema: {
+          operationId: "deleteEapPhase",
+          tags: ["EAP"],
+          summary: "Excluir fase sem itens nem histórico formal",
+          description:
+            "Somente a gestão do projeto. Retorna 409 quando a fase possui tarefas, marcos, evidências ou replanejamentos.",
+          security: [{ cookieAuth: [] }],
+          params: phaseParamsSchema,
+          response: {
+            204: z.undefined(),
+            ...errorResponses,
+          },
+        },
+      },
+      (request, reply) => controller.delete(request, reply),
+    );
+
     app.get(
       "/projects/:id/phases/:phaseId/tasks",
       {
@@ -238,6 +279,129 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
       (request) => controller.updateTaskProgress(request),
     );
 
+    app.post(
+      "/projects/:id/phases/:phaseId/tasks/:taskId/cancel",
+      {
+        schema: {
+          operationId: "cancelEapTask",
+          tags: ["EAP"],
+          summary: "Cancelar tarefa",
+          description:
+            "Somente a gestão do projeto, com justificativa. Retorna 409 quando a tarefa já está cancelada ou concluída.",
+          security: [{ cookieAuth: [] }],
+          params: taskParamsSchema,
+          body: taskStatusDecisionBodySchema,
+          response: {
+            200: eapTaskSchema,
+            ...taskErrorResponses,
+          },
+        },
+      },
+      (request) => controller.cancelTask(request),
+    );
+
+    app.post(
+      "/projects/:id/phases/:phaseId/tasks/:taskId/reactivate",
+      {
+        schema: {
+          operationId: "reactivateEapTask",
+          tags: ["EAP"],
+          summary: "Reativar tarefa cancelada",
+          description:
+            "Somente a gestão do projeto, com justificativa. A situação volta a ser derivada do percentual.",
+          security: [{ cookieAuth: [] }],
+          params: taskParamsSchema,
+          body: taskStatusDecisionBodySchema,
+          response: {
+            200: eapTaskSchema,
+            ...taskErrorResponses,
+          },
+        },
+      },
+      (request) => controller.reactivateTask(request),
+    );
+
+    app.get(
+      "/projects/:id/phases/:phaseId/tasks/:taskId/impediments",
+      {
+        schema: {
+          operationId: "listEapTaskImpediments",
+          tags: ["EAP"],
+          summary: "Listar impedimentos da tarefa",
+          description: "Impedimentos em aberto e resolvidos, do mais recente para o mais antigo.",
+          security: [{ cookieAuth: [] }],
+          params: taskParamsSchema,
+          response: {
+            200: eapImpedimentListResponseSchema,
+            ...taskErrorResponses,
+          },
+        },
+      },
+      (request) => controller.listImpediments(request),
+    );
+
+    app.post(
+      "/projects/:id/phases/:phaseId/tasks/:taskId/impediments",
+      {
+        schema: {
+          operationId: "registerEapTaskImpediment",
+          tags: ["EAP"],
+          summary: "Registrar impedimento da tarefa",
+          description:
+            "Exige motivo. Não altera percentual, situação, linha de base nem datas planejadas. Retorna 409 quando já existe impedimento em aberto ou a tarefa está cancelada ou concluída.",
+          security: [{ cookieAuth: [] }],
+          params: taskParamsSchema,
+          body: registerImpedimentBodySchema,
+          response: {
+            201: eapImpedimentChangeResponseSchema,
+            ...taskErrorResponses,
+          },
+        },
+      },
+      (request, reply) => controller.registerImpediment(request, reply),
+    );
+
+    app.patch(
+      "/projects/:id/phases/:phaseId/tasks/:taskId/impediments/:impedimentId",
+      {
+        schema: {
+          operationId: "updateEapTaskImpediment",
+          tags: ["EAP"],
+          summary: "Atualizar motivo do impedimento em aberto",
+          description: "O motivo anterior permanece na auditoria.",
+          security: [{ cookieAuth: [] }],
+          params: impedimentParamsSchema,
+          body: updateImpedimentBodySchema,
+          response: {
+            200: eapImpedimentChangeResponseSchema,
+            ...taskErrorResponses,
+          },
+        },
+      },
+      (request) => controller.updateImpediment(request),
+    );
+
+    app.post(
+      "/projects/:id/phases/:phaseId/tasks/:taskId/impediments/resolve",
+      {
+        schema: {
+          operationId: "resolveEapTaskImpediment",
+          tags: ["EAP"],
+          summary: "Resolver impedimento da tarefa",
+          description:
+            "Exige nota de resolução. Registra quem resolveu, quando e o tempo em aberto. Não altera percentual, situação, linha de base nem datas planejadas.",
+          security: [{ cookieAuth: [] }],
+          params: taskParamsSchema,
+          body: resolveImpedimentBodySchema,
+          response: {
+            200: eapImpedimentChangeResponseSchema,
+            ...taskErrorResponses,
+          },
+        },
+      },
+      (request) => controller.resolveImpediment(request),
+    );
+
     app.patch(
       "/projects/:id/phases/:phaseId/tasks/:taskId",
       {
@@ -255,6 +419,26 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
         },
       },
       (request) => controller.updateTask(request),
+    );
+
+    app.delete(
+      "/projects/:id/phases/:phaseId/tasks/:taskId",
+      {
+        schema: {
+          operationId: "deleteEapTask",
+          tags: ["EAP"],
+          summary: "Excluir tarefa sem movimentação",
+          description:
+            "Somente a gestão do projeto. Retorna 409 quando a tarefa está concluída ou possui evidências, impedimentos ou replanejamentos.",
+          security: [{ cookieAuth: [] }],
+          params: taskParamsSchema,
+          response: {
+            204: z.undefined(),
+            ...taskErrorResponses,
+          },
+        },
+      },
+      (request, reply) => controller.deleteTask(request, reply),
     );
 
     app.get(
@@ -350,6 +534,26 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
       (request) => controller.updateMilestone(request),
     );
 
+    app.delete(
+      "/projects/:id/phases/:phaseId/milestones/:milestoneId",
+      {
+        schema: {
+          operationId: "deleteEapMilestone",
+          tags: ["EAP"],
+          summary: "Excluir marco pendente sem histórico formal",
+          description:
+            "Somente a gestão do projeto. Retorna 409 quando o marco já foi entregue, aceito ou devolvido, ou possui evidências ou replanejamentos.",
+          security: [{ cookieAuth: [] }],
+          params: milestoneParamsSchema,
+          response: {
+            204: z.undefined(),
+            ...milestoneErrorResponses,
+          },
+        },
+      },
+      (request, reply) => controller.deleteMilestone(request, reply),
+    );
+
     app.post(
       "/projects/:id/phases/:phaseId/milestones/:milestoneId/deliver",
       {
@@ -375,7 +579,9 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
         schema: {
           operationId: "reviewEapMilestone",
           tags: ["EAP"],
-          summary: "Aprovar ou rejeitar marco",
+          summary: "Aceitar, solicitar correções ou rejeitar a entrega do marco",
+          description:
+            "Somente o homologador designado no marco ou, sem designação, o dono e quem tem DONO_PROJETO/GESTOR no projeto. Quem enviou a rodada não decide.",
           security: [{ cookieAuth: [] }],
           params: milestoneParamsSchema,
           body: reviewMilestoneBodySchema,
@@ -386,6 +592,44 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
         },
       },
       (request) => controller.reviewMilestone(request),
+    );
+
+    app.post(
+      "/projects/:id/phases/:phaseId/milestones/:milestoneId/resubmission",
+      {
+        schema: {
+          operationId: "authorizeEapMilestoneResubmission",
+          tags: ["EAP"],
+          summary: "Autorizar nova submissão após rejeição",
+          description: "PMO, ADMIN ou a gestão do projeto, com justificativa.",
+          security: [{ cookieAuth: [] }],
+          params: milestoneParamsSchema,
+          body: authorizeResubmissionBodySchema,
+          response: {
+            200: eapMilestoneSchema,
+            ...milestoneErrorResponses,
+          },
+        },
+      },
+      (request) => controller.authorizeResubmission(request),
+    );
+
+    app.get(
+      "/projects/:id/phases/:phaseId/milestones/:milestoneId/deliveries",
+      {
+        schema: {
+          operationId: "listEapMilestoneDeliveries",
+          tags: ["EAP"],
+          summary: "Listar rodadas de homologação do marco",
+          security: [{ cookieAuth: [] }],
+          params: milestoneParamsSchema,
+          response: {
+            200: eapMilestoneDeliveryListResponseSchema,
+            ...milestoneErrorResponses,
+          },
+        },
+      },
+      (request) => controller.listMilestoneDeliveries(request),
     );
 
     app.get(
@@ -480,6 +724,126 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
         },
       },
       (request) => controller.listAudit(request),
+    );
+
+    const rescheduleDescription =
+      "ADMIN, PMO ou gestão do projeto (dono, DONO_PROJETO, GESTOR). A primeira definição grava a linha de base e não conta como reprogramação; depois, exige justificativa, preserva o planejamento original e apenas sinaliza impactos.";
+
+    app.post(
+      "/projects/:id/reschedule",
+      {
+        schema: {
+          operationId: "rescheduleProject",
+          tags: ["Cronograma"],
+          summary: "Definir ou reprogramar o planejamento do projeto",
+          description: rescheduleDescription,
+          security: [{ cookieAuth: [] }],
+          params: projectIdParamsSchema,
+          body: rescheduleRangeBodySchema,
+          response: {
+            200: eapScheduleChangeSchema,
+            ...scheduleErrorResponses,
+          },
+        },
+      },
+      (request) => controller.rescheduleProject(request),
+    );
+
+    app.post(
+      "/projects/:id/phases/:phaseId/reschedule",
+      {
+        schema: {
+          operationId: "rescheduleEapPhase",
+          tags: ["Cronograma"],
+          summary: "Definir ou reprogramar o planejamento da fase",
+          description: rescheduleDescription,
+          security: [{ cookieAuth: [] }],
+          params: phaseParamsSchema,
+          body: rescheduleRangeBodySchema,
+          response: {
+            200: eapScheduleChangeSchema,
+            ...scheduleErrorResponses,
+          },
+        },
+      },
+      (request) => controller.reschedulePhase(request),
+    );
+
+    app.post(
+      "/projects/:id/phases/:phaseId/tasks/:taskId/reschedule",
+      {
+        schema: {
+          operationId: "rescheduleEapTask",
+          tags: ["Cronograma"],
+          summary: "Definir ou reprogramar o planejamento da tarefa",
+          description: rescheduleDescription,
+          security: [{ cookieAuth: [] }],
+          params: taskParamsSchema,
+          body: rescheduleRangeBodySchema,
+          response: {
+            200: eapScheduleChangeSchema,
+            ...scheduleErrorResponses,
+          },
+        },
+      },
+      (request) => controller.rescheduleTask(request),
+    );
+
+    app.post(
+      "/projects/:id/phases/:phaseId/milestones/:milestoneId/reschedule",
+      {
+        schema: {
+          operationId: "rescheduleEapMilestone",
+          tags: ["Cronograma"],
+          summary: "Definir ou reprogramar a data prevista do marco",
+          description: rescheduleDescription,
+          security: [{ cookieAuth: [] }],
+          params: milestoneParamsSchema,
+          body: rescheduleMilestoneBodySchema,
+          response: {
+            200: eapScheduleChangeSchema,
+            ...scheduleErrorResponses,
+          },
+        },
+      },
+      (request) => controller.rescheduleMilestone(request),
+    );
+
+    app.get(
+      "/projects/:id/schedule-changes",
+      {
+        schema: {
+          operationId: "listScheduleChanges",
+          tags: ["Cronograma"],
+          summary: "Histórico de planejamento e reprogramações de um item",
+          security: [{ cookieAuth: [] }],
+          params: projectIdParamsSchema,
+          querystring: listScheduleChangesQuerySchema,
+          response: {
+            200: eapScheduleChangeListResponseSchema,
+            ...scheduleErrorResponses,
+          },
+        },
+      },
+      (request) => controller.listScheduleChanges(request),
+    );
+
+    app.get(
+      "/projects/:id/schedule-monitoring",
+      {
+        schema: {
+          operationId: "getScheduleMonitoring",
+          tags: ["Cronograma"],
+          summary: "Indicadores de prazo, reprogramação e homologação do projeto",
+          security: [{ cookieAuth: [] }],
+          params: projectIdParamsSchema,
+          response: {
+            200: eapScheduleMonitoringSchema,
+            ...scheduleErrorResponses,
+          },
+        },
+      },
+      (request) => controller.getScheduleMonitoring(request),
     );
   };
 }

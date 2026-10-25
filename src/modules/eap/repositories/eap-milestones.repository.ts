@@ -1,6 +1,6 @@
 import { and, asc, eq, max } from "drizzle-orm";
 
-import { eapMilestones } from "../../../db/schema";
+import { eapMilestones, eapPhases } from "../../../db/schema";
 import type { DbClient } from "../../../db/types";
 import type {
   EapMilestonesRepository,
@@ -17,6 +17,17 @@ export class DrizzleEapMilestonesRepository implements EapMilestonesRepository {
       .from(eapMilestones)
       .where(eq(eapMilestones.phaseId, phaseId))
       .orderBy(asc(eapMilestones.sortOrder), asc(eapMilestones.createdAt));
+  }
+
+  async listByProject(projectId: string) {
+    const rows = await this.client
+      .select({ milestone: eapMilestones })
+      .from(eapMilestones)
+      .innerJoin(eapPhases, eq(eapPhases.id, eapMilestones.phaseId))
+      .where(eq(eapPhases.projectId, projectId))
+      .orderBy(asc(eapMilestones.sortOrder), asc(eapMilestones.createdAt));
+
+    return rows.map((row) => row.milestone);
   }
 
   async findById(milestoneId: string) {
@@ -89,5 +100,14 @@ export class DrizzleEapMilestonesRepository implements EapMilestonesRepository {
       .returning();
 
     return row ?? null;
+  }
+
+  async delete(milestoneId: string, phaseId: string) {
+    const rows = await this.client
+      .delete(eapMilestones)
+      .where(and(eq(eapMilestones.id, milestoneId), eq(eapMilestones.phaseId, phaseId)))
+      .returning({ id: eapMilestones.id });
+
+    return rows.length > 0;
   }
 }

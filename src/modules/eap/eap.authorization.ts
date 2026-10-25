@@ -62,6 +62,20 @@ export function canEditEapItem(context: ProjectAccessContext, createdBy: string)
   return createdBy === context.userId && canCreateEapItems(context);
 }
 
+/** Exclusão é restrita à gestão do projeto, inclusive para itens criados pelo próprio usuário. */
+export function canDeleteEapItem(context: ProjectAccessContext): boolean {
+  return canManageEapPhases(context);
+}
+
+/** Cancelar ou reativar tarefa é decisão explícita da gestão; o responsável apenas registra andamento. */
+export function canDecideEapTaskStatus(context: ProjectAccessContext): boolean {
+  return canManageEapPhases(context);
+}
+
+export function canSuspendEapPhase(context: ProjectAccessContext): boolean {
+  return canManageEapPhases(context);
+}
+
 export function canStructureEapTasks(context: ProjectAccessContext): boolean {
   return canManageEapPhases(context);
 }
@@ -84,8 +98,78 @@ export function canDeliverEapMilestone(context: ProjectAccessContext): boolean {
   );
 }
 
-export function canReviewEapMilestone(context: ProjectAccessContext): boolean {
-  return canStructureEapMilestones(context);
+/**
+ * Homologa o marco o gestor designado nele; sem designação, o dono ou quem tem DONO_PROJETO/GESTOR
+ * no projeto. Perfis globais (inclusive ADMIN e PMO) não bastam, e fornecedor nunca homologa.
+ */
+export function canHomologateEapMilestone(
+  context: ProjectAccessContext,
+  milestone: { reviewerId: string | null },
+): boolean {
+  if (
+    !canViewProject(context) ||
+    context.globalRole === "FORNECEDOR" ||
+    context.memberRoles.includes("FORNECEDOR")
+  ) {
+    return false;
+  }
+
+  if (milestone.reviewerId) {
+    return milestone.reviewerId === context.userId;
+  }
+
+  return (
+    isProjectOwner(context.userId, context.ownerId) ||
+    hasProjectManagementRole(context.memberRoles)
+  );
+}
+
+/** Após uma rejeição, a nova submissão depende do PMO/ADMIN ou da gestão do projeto. */
+export function canAuthorizeEapMilestoneResubmission(context: ProjectAccessContext): boolean {
+  if (context.globalRole === "ADMIN" || context.globalRole === "PMO") {
+    return true;
+  }
+
+  if (context.globalRole === "FORNECEDOR" || !canViewProject(context)) {
+    return false;
+  }
+
+  return (
+    isProjectOwner(context.userId, context.ownerId) ||
+    hasProjectManagementRole(context.memberRoles)
+  );
+}
+
+/**
+ * Reprogramar prazo é decisão de ADMIN, PMO ou da gestão do projeto (dono, DONO_PROJETO, GESTOR).
+ * COORDENADOR e GESTOR global sem vínculo de gestão no projeto não reprogramam.
+ */
+export function canRescheduleEap(context: ProjectAccessContext): boolean {
+  if (context.globalRole === "ADMIN" || context.globalRole === "PMO") {
+    return true;
+  }
+
+  if (context.globalRole === "FORNECEDOR" || context.globalRole === "COLABORADOR") {
+    return false;
+  }
+
+  return (
+    isProjectOwner(context.userId, context.ownerId) ||
+    hasProjectManagementRole(context.memberRoles)
+  );
+}
+
+/** Pode ser designado homologador quem participa do projeto e não atua como fornecedor. */
+export function canBeEapMilestoneReviewer(candidate: {
+  globalRole: string;
+  isOwner: boolean;
+  memberRoles: ProjectAccessContext["memberRoles"];
+}): boolean {
+  if (candidate.globalRole === "FORNECEDOR" || candidate.memberRoles.includes("FORNECEDOR")) {
+    return false;
+  }
+
+  return candidate.isOwner || candidate.memberRoles.length > 0;
 }
 
 const EVIDENCE_CONTRIBUTOR_ROLES = [

@@ -5,6 +5,7 @@ import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import {
   assertCanEditMilestone,
   assertCanView,
+  assertValidMilestoneReviewer,
   loadMilestoneInPhase,
   loadPhaseInProject,
   loadProjectAccess,
@@ -27,11 +28,13 @@ export function makeUpdateMilestoneUseCase(deps: {
     await loadPhaseInProject(deps.repos, projectId, phaseId);
     const current = await loadMilestoneInPhase(deps.repos, phaseId, milestoneId);
     assertCanEditMilestone(context, current.createdBy);
+    await assertValidMilestoneReviewer(deps.repos, context, projectId, input.reviewerId);
 
     return deps.runInTransaction(async (txRepos) => {
       const updated = await txRepos.milestones.update(milestoneId, phaseId, {
         ...(input.title !== undefined ? { title: input.title } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.reviewerId !== undefined ? { reviewerId: input.reviewerId } : {}),
         updatedBy: actor.id,
         updatedAt: new Date(),
       });
@@ -51,6 +54,9 @@ export function makeUpdateMilestoneUseCase(deps: {
           kind: "STRUCTURE",
           title: input.title,
           description: input.description,
+          ...(input.reviewerId !== undefined
+            ? { reviewerId: input.reviewerId, previousReviewerId: current.reviewerId }
+            : {}),
         },
         actorId: actor.id,
       });

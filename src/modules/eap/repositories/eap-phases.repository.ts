@@ -43,6 +43,16 @@ export class DrizzleEapPhasesRepository implements EapPhasesRepository {
     return row ?? null;
   }
 
+  async lockForUpdate(phaseId: string, projectId: string) {
+    const [row] = await this.client
+      .select()
+      .from(eapPhases)
+      .where(and(eq(eapPhases.id, phaseId), eq(eapPhases.projectId, projectId)))
+      .for("update");
+
+    return row ?? null;
+  }
+
   async findMaxSortOrder(projectId: string) {
     const [row] = await this.client
       .select({ value: max(eapPhases.sortOrder) })
@@ -117,5 +127,14 @@ export class DrizzleEapPhasesRepository implements EapPhasesRepository {
     }
 
     return this.listByProject(projectId);
+  }
+
+  async delete(phaseId: string, projectId: string) {
+    const rows = await this.client
+      .delete(eapPhases)
+      .where(and(eq(eapPhases.id, phaseId), eq(eapPhases.projectId, projectId)))
+      .returning({ id: eapPhases.id });
+
+    return rows.length > 0;
   }
 }

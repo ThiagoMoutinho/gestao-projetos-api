@@ -6,6 +6,7 @@ import type { EapAuditEntryDto, ListAuditQuery } from "./dtos/eap-audit.dto";
 import type {
   CreatePhaseInput,
   EapPhaseDto,
+  EapProjectProgressDto,
   ReorderPhaseItem,
   UpdatePhaseInput,
 } from "./dtos/eap-phases.dto";
@@ -16,16 +17,37 @@ import type {
   UpdateEvidenceInput,
 } from "./dtos/eap-evidences.dto";
 import type {
+  EapImpedimentChangeDto,
+  EapImpedimentEntryDto,
+  RegisterImpedimentInput,
+  ResolveImpedimentInput,
+  UpdateImpedimentInput,
+} from "./dtos/eap-impediments.dto";
+import type {
+  AuthorizeResubmissionInput,
+  DeliverMilestoneInput,
+  EapMilestoneDeliveryDto,
+} from "./dtos/eap-milestone-deliveries.dto";
+import type {
   CreateMilestoneInput,
   EapMilestoneDto,
   ReviewMilestoneInput,
   UpdateMilestoneInput,
 } from "./dtos/eap-milestones.dto";
+import type {
+  EapScheduleChangeDto,
+  EapScheduleMonitoringDto,
+  ListScheduleChangesQuery,
+  RescheduleMilestoneInput,
+  RescheduleRangeInput,
+} from "./dtos/eap-schedule.dto";
 import type { ReorderMilestoneItem } from "./use-cases/reorder-milestones";
+import type { RescheduleTarget } from "./use-cases/reschedule";
 import type { ReorderTaskItem } from "./use-cases/reorder-tasks";
 import type {
   CreateTaskInput,
   EapTaskDto,
+  TaskStatusDecisionInput,
   UpdateTaskInput,
   UpdateTaskProgressInput,
 } from "./dtos/eap-tasks.dto";
@@ -34,7 +56,7 @@ type EapPhaseUseCases = {
   listPhases: (
     actor: AuthUser,
     projectId: string,
-  ) => Promise<{ data: EapPhaseDto[] }>;
+  ) => Promise<{ data: EapPhaseDto[]; summary: EapProjectProgressDto }>;
   getPhase: (actor: AuthUser, projectId: string, phaseId: string) => Promise<EapPhaseDto>;
   createPhase: (
     actor: AuthUser,
@@ -51,7 +73,7 @@ type EapPhaseUseCases = {
     actor: AuthUser,
     projectId: string,
     items: ReorderPhaseItem[],
-  ) => Promise<{ data: EapPhaseDto[] }>;
+  ) => Promise<{ data: EapPhaseDto[]; summary: EapProjectProgressDto }>;
   listTasks: (
     actor: AuthUser,
     projectId: string,
@@ -83,12 +105,54 @@ type EapPhaseUseCases = {
     taskId: string,
     input: UpdateTaskProgressInput,
   ) => Promise<EapTaskDto>;
+  cancelTask: (
+    actor: AuthUser,
+    projectId: string,
+    phaseId: string,
+    taskId: string,
+    input: TaskStatusDecisionInput,
+  ) => Promise<EapTaskDto>;
+  reactivateTask: (
+    actor: AuthUser,
+    projectId: string,
+    phaseId: string,
+    taskId: string,
+    input: TaskStatusDecisionInput,
+  ) => Promise<EapTaskDto>;
   reorderTasks: (
     actor: AuthUser,
     projectId: string,
     phaseId: string,
     items: ReorderTaskItem[],
   ) => Promise<{ data: EapTaskDto[] }>;
+  listImpediments: (
+    actor: AuthUser,
+    projectId: string,
+    phaseId: string,
+    taskId: string,
+  ) => Promise<{ data: EapImpedimentEntryDto[] }>;
+  registerImpediment: (
+    actor: AuthUser,
+    projectId: string,
+    phaseId: string,
+    taskId: string,
+    input: RegisterImpedimentInput,
+  ) => Promise<EapImpedimentChangeDto>;
+  updateImpediment: (
+    actor: AuthUser,
+    projectId: string,
+    phaseId: string,
+    taskId: string,
+    impedimentId: string,
+    input: UpdateImpedimentInput,
+  ) => Promise<EapImpedimentChangeDto>;
+  resolveImpediment: (
+    actor: AuthUser,
+    projectId: string,
+    phaseId: string,
+    taskId: string,
+    input: ResolveImpedimentInput,
+  ) => Promise<EapImpedimentChangeDto>;
   listMilestones: (
     actor: AuthUser,
     projectId: string,
@@ -118,7 +182,21 @@ type EapPhaseUseCases = {
     projectId: string,
     phaseId: string,
     milestoneId: string,
+    input: DeliverMilestoneInput,
   ) => Promise<EapMilestoneDto>;
+  authorizeResubmission: (
+    actor: AuthUser,
+    projectId: string,
+    phaseId: string,
+    milestoneId: string,
+    input: AuthorizeResubmissionInput,
+  ) => Promise<EapMilestoneDto>;
+  listMilestoneDeliveries: (
+    actor: AuthUser,
+    projectId: string,
+    phaseId: string,
+    milestoneId: string,
+  ) => Promise<{ data: EapMilestoneDeliveryDto[] }>;
   reviewMilestone: (
     actor: AuthUser,
     projectId: string,
@@ -158,6 +236,31 @@ type EapPhaseUseCases = {
     projectId: string,
     query: ListAuditQuery,
   ) => Promise<{ data: EapAuditEntryDto[] }>;
+  reschedule: (
+    actor: AuthUser,
+    projectId: string,
+    target: RescheduleTarget,
+    input: RescheduleRangeInput | RescheduleMilestoneInput,
+  ) => Promise<EapScheduleChangeDto>;
+  listScheduleChanges: (
+    actor: AuthUser,
+    projectId: string,
+    query: ListScheduleChangesQuery,
+  ) => Promise<{ data: EapScheduleChangeDto[] }>;
+  getScheduleMonitoring: (actor: AuthUser, projectId: string) => Promise<EapScheduleMonitoringDto>;
+  deletePhase: (actor: AuthUser, projectId: string, phaseId: string) => Promise<void>;
+  deleteTask: (
+    actor: AuthUser,
+    projectId: string,
+    phaseId: string,
+    taskId: string,
+  ) => Promise<void>;
+  deleteMilestone: (
+    actor: AuthUser,
+    projectId: string,
+    phaseId: string,
+    milestoneId: string,
+  ) => Promise<void>;
 };
 
 export function makeEapController(useCases: EapPhaseUseCases) {
@@ -198,6 +301,46 @@ export function makeEapController(useCases: EapPhaseUseCases) {
         request.params.phaseId,
         request.body,
       );
+    },
+
+    async delete(
+      request: FastifyRequest<{ Params: { id: string; phaseId: string } }>,
+      reply: FastifyReply,
+    ) {
+      await useCases.deletePhase(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+      );
+      return reply.status(204).send();
+    },
+
+    async deleteTask(
+      request: FastifyRequest<{ Params: { id: string; phaseId: string; taskId: string } }>,
+      reply: FastifyReply,
+    ) {
+      await useCases.deleteTask(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+        request.params.taskId,
+      );
+      return reply.status(204).send();
+    },
+
+    async deleteMilestone(
+      request: FastifyRequest<{
+        Params: { id: string; phaseId: string; milestoneId: string };
+      }>,
+      reply: FastifyReply,
+    ) {
+      await useCases.deleteMilestone(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+        request.params.milestoneId,
+      );
+      return reply.status(204).send();
     },
 
     async reorder(
@@ -272,6 +415,95 @@ export function makeEapController(useCases: EapPhaseUseCases) {
       }>,
     ) {
       return useCases.updateTaskProgress(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+        request.params.taskId,
+        request.body,
+      );
+    },
+
+    async cancelTask(
+      request: FastifyRequest<{
+        Params: { id: string; phaseId: string; taskId: string };
+        Body: TaskStatusDecisionInput;
+      }>,
+    ) {
+      return useCases.cancelTask(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+        request.params.taskId,
+        request.body,
+      );
+    },
+
+    async reactivateTask(
+      request: FastifyRequest<{
+        Params: { id: string; phaseId: string; taskId: string };
+        Body: TaskStatusDecisionInput;
+      }>,
+    ) {
+      return useCases.reactivateTask(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+        request.params.taskId,
+        request.body,
+      );
+    },
+
+    async listImpediments(
+      request: FastifyRequest<{ Params: { id: string; phaseId: string; taskId: string } }>,
+    ) {
+      return useCases.listImpediments(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+        request.params.taskId,
+      );
+    },
+
+    async registerImpediment(
+      request: FastifyRequest<{
+        Params: { id: string; phaseId: string; taskId: string };
+        Body: RegisterImpedimentInput;
+      }>,
+      reply: FastifyReply,
+    ) {
+      const result = await useCases.registerImpediment(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+        request.params.taskId,
+        request.body,
+      );
+      return reply.status(201).send(result);
+    },
+
+    async updateImpediment(
+      request: FastifyRequest<{
+        Params: { id: string; phaseId: string; taskId: string; impedimentId: string };
+        Body: UpdateImpedimentInput;
+      }>,
+    ) {
+      return useCases.updateImpediment(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+        request.params.taskId,
+        request.params.impedimentId,
+        request.body,
+      );
+    },
+
+    async resolveImpediment(
+      request: FastifyRequest<{
+        Params: { id: string; phaseId: string; taskId: string };
+        Body: ResolveImpedimentInput;
+      }>,
+    ) {
+      return useCases.resolveImpediment(
         getAuthUser(request),
         request.params.id,
         request.params.phaseId,
@@ -365,9 +597,39 @@ export function makeEapController(useCases: EapPhaseUseCases) {
     async deliverMilestone(
       request: FastifyRequest<{
         Params: { id: string; phaseId: string; milestoneId: string };
+        Body: DeliverMilestoneInput;
       }>,
     ) {
       return useCases.deliverMilestone(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+        request.params.milestoneId,
+        request.body ?? {},
+      );
+    },
+
+    async authorizeResubmission(
+      request: FastifyRequest<{
+        Params: { id: string; phaseId: string; milestoneId: string };
+        Body: AuthorizeResubmissionInput;
+      }>,
+    ) {
+      return useCases.authorizeResubmission(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+        request.params.milestoneId,
+        request.body,
+      );
+    },
+
+    async listMilestoneDeliveries(
+      request: FastifyRequest<{
+        Params: { id: string; phaseId: string; milestoneId: string };
+      }>,
+    ) {
+      return useCases.listMilestoneDeliveries(
         getAuthUser(request),
         request.params.id,
         request.params.phaseId,
@@ -440,6 +702,70 @@ export function makeEapController(useCases: EapPhaseUseCases) {
       request: FastifyRequest<{ Params: { id: string }; Querystring: ListAuditQuery }>,
     ) {
       return useCases.listAudit(getAuthUser(request), request.params.id, request.query);
+    },
+
+    async rescheduleProject(
+      request: FastifyRequest<{ Params: { id: string }; Body: RescheduleRangeInput }>,
+    ) {
+      return useCases.reschedule(
+        getAuthUser(request),
+        request.params.id,
+        { entityType: "PROJECT" },
+        request.body,
+      );
+    },
+
+    async reschedulePhase(
+      request: FastifyRequest<{ Params: { id: string; phaseId: string }; Body: RescheduleRangeInput }>,
+    ) {
+      return useCases.reschedule(
+        getAuthUser(request),
+        request.params.id,
+        { entityType: "PHASE", phaseId: request.params.phaseId },
+        request.body,
+      );
+    },
+
+    async rescheduleTask(
+      request: FastifyRequest<{
+        Params: { id: string; phaseId: string; taskId: string };
+        Body: RescheduleRangeInput;
+      }>,
+    ) {
+      return useCases.reschedule(
+        getAuthUser(request),
+        request.params.id,
+        { entityType: "TASK", phaseId: request.params.phaseId, taskId: request.params.taskId },
+        request.body,
+      );
+    },
+
+    async rescheduleMilestone(
+      request: FastifyRequest<{
+        Params: { id: string; phaseId: string; milestoneId: string };
+        Body: RescheduleMilestoneInput;
+      }>,
+    ) {
+      return useCases.reschedule(
+        getAuthUser(request),
+        request.params.id,
+        {
+          entityType: "MILESTONE",
+          phaseId: request.params.phaseId,
+          milestoneId: request.params.milestoneId,
+        },
+        request.body,
+      );
+    },
+
+    async listScheduleChanges(
+      request: FastifyRequest<{ Params: { id: string }; Querystring: ListScheduleChangesQuery }>,
+    ) {
+      return useCases.listScheduleChanges(getAuthUser(request), request.params.id, request.query);
+    },
+
+    async getScheduleMonitoring(request: FastifyRequest<{ Params: { id: string } }>) {
+      return useCases.getScheduleMonitoring(getAuthUser(request), request.params.id);
     },
   };
 }

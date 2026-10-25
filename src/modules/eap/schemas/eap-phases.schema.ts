@@ -11,12 +11,12 @@ export const eapPhaseStatusSchema = z.enum([
 
 export type EapPhaseStatus = z.infer<typeof eapPhaseStatusSchema>;
 
-const isoDateTimeSchema = z
-  .string()
-  .min(1)
-  .refine((value) => !Number.isNaN(Date.parse(value)), {
-    message: "Data inválida.",
-  });
+function requiredIsoDateTime(message: string) {
+  return z
+    .string(message)
+    .min(1, message)
+    .refine((value) => !Number.isNaN(Date.parse(value)), "Data inválida.");
+}
 
 export const projectIdParamsSchema = z.object({
   id: z.string().min(1),
@@ -31,10 +31,9 @@ export const createPhaseBodySchema = z
   .object({
     name: z.string().trim().min(1).max(255),
     description: z.string().trim().max(4000).nullable().optional(),
-    status: eapPhaseStatusSchema.optional(),
     sortOrder: z.number().int().min(0).optional(),
-    plannedStartAt: isoDateTimeSchema.nullable().optional(),
-    plannedEndAt: isoDateTimeSchema.nullable().optional(),
+    plannedStartAt: requiredIsoDateTime("Informe o início planejado."),
+    plannedEndAt: requiredIsoDateTime("Informe o término planejado."),
     responsibleId: z.string().min(1).nullable().optional(),
     completionCriteria: z.string().trim().max(4000).nullable().optional(),
   })
@@ -44,7 +43,10 @@ export const updatePhaseBodySchema = z
   .object({
     name: z.string().trim().min(1).max(255).optional(),
     description: z.string().trim().max(4000).nullable().optional(),
-    status: eapPhaseStatusSchema.optional(),
+    suspended: z
+      .boolean()
+      .optional()
+      .describe("Suspende ou retoma a fase. A situação de execução é calculada a partir das tarefas e marcos."),
     responsibleId: z.string().min(1).nullable().optional(),
     completionCriteria: z.string().trim().max(4000).nullable().optional(),
   })
@@ -81,6 +83,15 @@ export const eapPhaseSchema = z.object({
   plannedEndAt: z.string().nullable(),
   actualStartAt: z.string().nullable(),
   actualEndAt: z.string().nullable(),
+  calculatedStatus: eapPhaseStatusSchema.describe(
+    "Situação pela regra da EAP. Difere de status apenas em registros antigos ainda não reconciliados.",
+  ),
+  progressState: z.enum(["VALUE", "EMPTY", "NO_ELIGIBLE"]),
+  progressBasisPoints: z
+    .number()
+    .int()
+    .nullable()
+    .describe("Andamento consolidado em centésimos de ponto percentual (6625 = 66,25%)."),
   createdBy: z.string(),
   updatedBy: z.string(),
   createdAt: z.string(),
@@ -89,6 +100,10 @@ export const eapPhaseSchema = z.object({
 
 export const eapPhaseListResponseSchema = z.object({
   data: z.array(eapPhaseSchema),
+  summary: z.object({
+    progressBasisPoints: z.number().int().nullable(),
+    coverageBasisPoints: z.number().int().nullable(),
+  }),
 });
 
 export const errorResponses = {

@@ -1,8 +1,9 @@
-import { and, desc, eq, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, or, sql } from "drizzle-orm";
 
 import { eapAuditLogs, user } from "../../../db/schema";
 import type { DbClient } from "../../../db/types";
 import type {
+  EapAuditActionFilter,
   EapAuditEntityFilter,
   EapAuditRepository,
   NewEapAuditLogRecord,
@@ -63,6 +64,28 @@ export class DrizzleEapAuditRepository implements EapAuditRepository {
       .where(and(eq(eapAuditLogs.projectId, filter.projectId), scope))
       .orderBy(desc(eapAuditLogs.createdAt), desc(eapAuditLogs.id))
       .limit(filter.limit);
+
+    return rows.map((row) => ({ ...row.log, actorName: row.actorName }));
+  }
+
+  async listByAction(filter: EapAuditActionFilter) {
+    const conditions = [
+      eq(eapAuditLogs.projectId, filter.projectId),
+      eq(eapAuditLogs.action, filter.action),
+    ];
+    if (filter.entityType) {
+      conditions.push(eq(eapAuditLogs.entityType, filter.entityType));
+    }
+    if (filter.entityId) {
+      conditions.push(eq(eapAuditLogs.entityId, filter.entityId));
+    }
+
+    const rows = await this.client
+      .select({ log: eapAuditLogs, actorName: user.name })
+      .from(eapAuditLogs)
+      .leftJoin(user, eq(eapAuditLogs.actorId, user.id))
+      .where(and(...conditions))
+      .orderBy(asc(eapAuditLogs.createdAt), asc(eapAuditLogs.id));
 
     return rows.map((row) => ({ ...row.log, actorName: row.actorName }));
   }

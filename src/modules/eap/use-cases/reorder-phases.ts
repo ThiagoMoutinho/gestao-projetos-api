@@ -1,6 +1,6 @@
 import type { AuthUser } from "../../../lib/session";
 import type { ReorderPhaseItem } from "../dtos/eap-phases.dto";
-import { toEapPhaseDto } from "../dtos/eap-phases.dto";
+import { presentPhaseList } from "./phase-rollup";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import {
   assertCanManagePhases,
@@ -61,6 +61,6 @@ export function makeReorderPhasesUseCase(deps: {
       return phases;
     });
 
-    return { data: updated.map(toEapPhaseDto) };
+    return presentPhaseList(deps.repos, projectId, updated);
   };
 }

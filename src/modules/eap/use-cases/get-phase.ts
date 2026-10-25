@@ -1,6 +1,6 @@
 import type { AuthUser } from "../../../lib/session";
-import { toEapPhaseDto } from "../dtos/eap-phases.dto";
 import type { EapRepos } from "../repositories/contracts";
+import { presentPhase } from "./phase-rollup";
 import { assertCanView, loadProjectAccess, phaseNotFoundError } from "./shared";
 
 export function makeGetPhaseUseCase(deps: { repos: EapRepos }) {
@@ -13,6 +13,6 @@ export function makeGetPhaseUseCase(deps: { repos: EapRepos }) {
       throw phaseNotFoundError();
     }
 
-    return toEapPhaseDto(phase);
+    return presentPhase(deps.repos, phase);
   };
 }

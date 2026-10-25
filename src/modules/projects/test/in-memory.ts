@@ -22,6 +22,14 @@ export type InMemoryStore = {
   members: ProjectMemberRow[];
 };
 
+/** Projeto sem planejamento definido (datas vigentes e linha de base vazias). */
+export const noPlan = {
+  baselineStartAt: null,
+  baselineEndAt: null,
+  plannedStartAt: null,
+  plannedEndAt: null,
+} satisfies Partial<ProjectRow>;
+
 export function createInMemoryStore(seed?: Partial<InMemoryStore>): InMemoryStore {
   return {
     users: seed?.users ?? [],
@@ -49,6 +57,7 @@ class InMemoryProjectsRepository implements ProjectsRepository {
     const now = new Date();
     const row: ProjectRow = {
       ...data,
+      ...noPlan,
       createdAt: now,
       updatedAt: now,
     };

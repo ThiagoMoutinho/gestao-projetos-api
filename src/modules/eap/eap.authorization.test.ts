@@ -4,13 +4,19 @@ import { describe, it } from "node:test";
 import type { UserRole } from "../../lib/session";
 import type { ProjectMemberRole } from "../projects/schemas/projects.schema";
 import {
+  canAuthorizeEapMilestoneResubmission,
+  canBeEapMilestoneReviewer,
   canCreateEapItems,
+  canDecideEapTaskStatus,
+  canDeleteEapItem,
+  canSuspendEapPhase,
   canDeliverEapMilestone,
   canEditEapItem,
+  canHomologateEapMilestone,
   canManageEapPhases,
   canRegisterEapEvidence,
   canRegisterEapEvidenceOn,
-  canReviewEapMilestone,
+  canRescheduleEap,
   canStructureEapMilestones,
   canStructureEapTasks,
   canUpdateEapTaskProgress,
@@ -84,6 +90,66 @@ describe("autorização de fases da EAP", () => {
     );
     assert.equal(
       canManageEapPhases(context("COLABORADOR", { memberRoles: ["DESENVOLVEDOR"] })),
+      false,
+    );
+  });
+});
+
+describe("autorização de reprogramação de prazos", () => {
+  it("permite ADMIN, PMO, dono e DONO_PROJETO/GESTOR do projeto", () => {
+    assert.equal(canRescheduleEap(context("ADMIN")), true);
+    assert.equal(canRescheduleEap(context("PMO")), true);
+    assert.equal(canRescheduleEap(context("GESTOR", { userId: "owner-1" })), true);
+    assert.equal(canRescheduleEap(context("GESTOR", { memberRoles: ["GESTOR"] })), true);
+    assert.equal(canRescheduleEap(context("GESTOR", { memberRoles: ["DONO_PROJETO"] })), true);
+  });
+
+  it("impede COORDENADOR, GESTOR sem vínculo de gestão, fornecedor e colaborador", () => {
+    assert.equal(canRescheduleEap(context("COORDENADOR")), false);
+    assert.equal(canRescheduleEap(context("GESTOR")), false);
+    assert.equal(canRescheduleEap(context("GESTOR", { memberRoles: ["PO", "DESENVOLVEDOR"] })), false);
+    assert.equal(canRescheduleEap(context("FORNECEDOR", { memberRoles: ["GESTOR"] })), false);
+    assert.equal(canRescheduleEap(context("COLABORADOR", { memberRoles: ["GESTOR"] })), false);
+  });
+});
+
+describe("autorização de decisões de situação na EAP", () => {
+  it("permite somente a gestão cancelar, reativar tarefa e suspender fase", () => {
+    for (const check of [canDecideEapTaskStatus, canSuspendEapPhase]) {
+      assert.equal(check(context("ADMIN")), true);
+      assert.equal(check(context("PMO")), true);
+      assert.equal(check(context("COORDENADOR")), true);
+      assert.equal(check(context("GESTOR", { memberRoles: ["GESTOR"] })), true);
+      assert.equal(check(context("GESTOR", { memberRoles: ["OBSERVADOR"] })), false);
+      assert.equal(check(context("COLABORADOR", { memberRoles: ["DESENVOLVEDOR"] })), false);
+      assert.equal(check(context("FORNECEDOR", { memberRoles: ["FORNECEDOR"] })), false);
+    }
+  });
+});
+
+describe("autorização de exclusão na EAP", () => {
+  it("permite somente a gestão do projeto excluir itens", () => {
+    assert.equal(canDeleteEapItem(context("ADMIN")), true);
+    assert.equal(canDeleteEapItem(context("PMO")), true);
+    assert.equal(canDeleteEapItem(context("COORDENADOR")), true);
+    assert.equal(canDeleteEapItem(context("GESTOR", { memberRoles: ["GESTOR"] })), true);
+    assert.equal(
+      canDeleteEapItem(context("GESTOR", { userId: "owner-1", ownerId: "owner-1" })),
+      true,
+    );
+  });
+
+  it("impede criadores sem papel de gestão de excluir os próprios itens", () => {
+    assert.equal(
+      canDeleteEapItem(context("COLABORADOR", { memberRoles: ["DESENVOLVEDOR"] })),
+      false,
+    );
+    assert.equal(
+      canDeleteEapItem(context("FORNECEDOR", { memberRoles: ["FORNECEDOR"] })),
+      false,
+    );
+    assert.equal(
+      canDeleteEapItem(context("GESTOR", { memberRoles: ["RESPONSAVEL_TECNICO"] })),
       false,
     );
   });
@@ -314,15 +380,94 @@ describe("autorização de marcos da EAP", () => {
     );
   });
 
-  it("restringe a decisão institucional a perfis autorizados", () => {
-    assert.equal(canReviewEapMilestone(context("ADMIN")), true);
-    assert.equal(canReviewEapMilestone(context("COORDENADOR")), true);
+  it("homologa somente a gestão vinculada ao projeto, sem bastar o perfil global", () => {
+    const undesignated = { reviewerId: null };
+    assert.equal(canHomologateEapMilestone(context("ADMIN"), undesignated), false);
+    assert.equal(canHomologateEapMilestone(context("PMO"), undesignated), false);
+    assert.equal(canHomologateEapMilestone(context("COORDENADOR"), undesignated), false);
+    assert.equal(canHomologateEapMilestone(context("GESTOR"), undesignated), false);
     assert.equal(
-      canReviewEapMilestone(context("GESTOR", { memberRoles: ["DONO_PROJETO"] })),
+      canHomologateEapMilestone(context("GESTOR", { memberRoles: ["GESTOR"] }), undesignated),
       true,
     );
     assert.equal(
-      canReviewEapMilestone(context("FORNECEDOR", { memberRoles: ["FORNECEDOR"] })),
+      canHomologateEapMilestone(context("PMO", { memberRoles: ["DONO_PROJETO"] }), undesignated),
+      true,
+    );
+    assert.equal(
+      canHomologateEapMilestone(context("GESTOR", { userId: "owner-1" }), undesignated),
+      true,
+    );
+    assert.equal(
+      canHomologateEapMilestone(
+        context("GESTOR", { memberRoles: ["GESTOR", "FORNECEDOR"] }),
+        undesignated,
+      ),
+      false,
+    );
+    assert.equal(
+      canHomologateEapMilestone(context("FORNECEDOR", { memberRoles: ["GESTOR"] }), undesignated),
+      false,
+    );
+  });
+
+  it("com homologador designado, somente ele decide", () => {
+    const designated = { reviewerId: "user-1" };
+    assert.equal(
+      canHomologateEapMilestone(context("COLABORADOR", { memberRoles: ["OBSERVADOR"] }), designated),
+      true,
+    );
+    assert.equal(
+      canHomologateEapMilestone(
+        context("GESTOR", { userId: "owner-1", memberRoles: ["DONO_PROJETO"] }),
+        designated,
+      ),
+      false,
+    );
+    assert.equal(canHomologateEapMilestone(context("COLABORADOR"), designated), false);
+  });
+
+  it("autoriza nova submissão o PMO/ADMIN ou a gestão do projeto", () => {
+    assert.equal(canAuthorizeEapMilestoneResubmission(context("PMO")), true);
+    assert.equal(canAuthorizeEapMilestoneResubmission(context("ADMIN")), true);
+    assert.equal(canAuthorizeEapMilestoneResubmission(context("COORDENADOR")), false);
+    assert.equal(
+      canAuthorizeEapMilestoneResubmission(context("GESTOR", { memberRoles: ["GESTOR"] })),
+      true,
+    );
+    assert.equal(
+      canAuthorizeEapMilestoneResubmission(context("FORNECEDOR", { memberRoles: ["FORNECEDOR"] })),
+      false,
+    );
+  });
+
+  it("designa como homologador somente participante que não seja fornecedor", () => {
+    assert.equal(
+      canBeEapMilestoneReviewer({ globalRole: "GESTOR", isOwner: false, memberRoles: ["GESTOR"] }),
+      true,
+    );
+    assert.equal(
+      canBeEapMilestoneReviewer({ globalRole: "PMO", isOwner: true, memberRoles: [] }),
+      true,
+    );
+    assert.equal(
+      canBeEapMilestoneReviewer({ globalRole: "GESTOR", isOwner: false, memberRoles: [] }),
+      false,
+    );
+    assert.equal(
+      canBeEapMilestoneReviewer({
+        globalRole: "FORNECEDOR",
+        isOwner: false,
+        memberRoles: ["OBSERVADOR"],
+      }),
+      false,
+    );
+    assert.equal(
+      canBeEapMilestoneReviewer({
+        globalRole: "GESTOR",
+        isOwner: false,
+        memberRoles: ["GESTOR", "FORNECEDOR"],
+      }),
       false,
     );
   });

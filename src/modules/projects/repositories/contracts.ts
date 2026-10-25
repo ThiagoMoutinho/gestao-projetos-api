@@ -20,6 +20,10 @@ export type ProjectUpdateRecord = {
   glpiTicketId?: string | null;
   ownerId?: string;
   status?: ProjectRow["status"];
+  baselineStartAt?: Date | null;
+  baselineEndAt?: Date | null;
+  plannedStartAt?: Date | null;
+  plannedEndAt?: Date | null;
   updatedAt?: Date;
 };
 

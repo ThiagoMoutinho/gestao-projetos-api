@@ -15,6 +15,53 @@ export const listAuditQuerySchema = z
   })
   .strict();
 
+export const eapAuditEventKindSchema = z.enum([
+  "CANCELLATION",
+  "REACTIVATION",
+  "AUTOMATIC_STATUS",
+  "STATUS",
+  "PROGRESS",
+  "IMPEDIMENT_OPENED",
+  "IMPEDIMENT_UPDATED",
+  "IMPEDIMENT_RESOLVED",
+  "IMPEDIMENT_FLAGGED",
+  "IMPEDIMENT_UNFLAGGED",
+  "DELIVERY",
+  "ACCEPTANCE",
+  "ADJUSTMENTS_REQUESTED",
+  "REJECTION",
+  "RESUBMISSION_AUTHORIZED",
+  "RESCHEDULE",
+  "PLANNING_DEFINED",
+  "CREATION",
+  "UPDATE",
+  "DELETION",
+  "REORDER",
+  "EVIDENCE",
+  "OTHER",
+]);
+
+export type EapAuditEventKind = z.infer<typeof eapAuditEventKindSchema>;
+
+export const eapAuditDetailsSchema = z.object({
+  kind: eapAuditEventKindSchema,
+  automatic: z.boolean(),
+  fromStatus: z.string().nullable(),
+  toStatus: z.string().nullable(),
+  justification: z.string().nullable(),
+  note: z.string().nullable(),
+  nonconformities: z.string().nullable(),
+  adjustments: z.string().nullable(),
+  round: z.number().nullable(),
+  cause: z.string().nullable(),
+  fromPercent: z.number().nullable(),
+  toPercent: z.number().nullable(),
+  reason: z.string().nullable(),
+  previousReason: z.string().nullable(),
+  resolutionNote: z.string().nullable(),
+  openMinutes: z.number().nullable(),
+});
+
 export const eapAuditEntrySchema = z.object({
   id: z.string(),
   entityType: z.string(),
@@ -24,6 +71,7 @@ export const eapAuditEntrySchema = z.object({
   actorId: z.string(),
   actorName: z.string().nullable(),
   createdAt: z.string(),
+  details: eapAuditDetailsSchema,
 });
 
 export const eapAuditListResponseSchema = z.object({

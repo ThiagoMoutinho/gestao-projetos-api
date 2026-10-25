@@ -86,16 +86,18 @@ describe("UpdateMilestone, ListMilestones e GetMilestone", () => {
     const updateMilestone = makeUpdateMilestoneUseCase({ repos, runInTransaction: runner });
     const listMilestones = makeListMilestonesUseCase({ repos });
     const getMilestone = makeGetMilestoneUseCase({ repos });
-    const phaseA = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase A" });
-    const phaseB = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Fase B" });
+    const phaseA = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase A" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phaseB = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Fase B" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
     const milestoneA = await createMilestone(actor("PMO", "pmo-1"), "project-1", phaseA.id, {
       title: "Marco A",
       type: "ENTREGA",
-    });
+    
+    plannedAt: "2026-06-15T15:00:00.000Z"});
     const milestoneB = await createMilestone(actor("PMO", "pmo-1"), "project-2", phaseB.id, {
       title: "Marco B",
       type: "ENTREGA",
-    });
+    
+    plannedAt: "2026-06-15T15:00:00.000Z"});
 
     const listed = await listMilestones(actor("FORNECEDOR", "forn-1"), "project-1", phaseA.id);
     assert.deepEqual(

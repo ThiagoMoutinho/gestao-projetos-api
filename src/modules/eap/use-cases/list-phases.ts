@@ -1,6 +1,6 @@
 import type { AuthUser } from "../../../lib/session";
-import { toEapPhaseDto } from "../dtos/eap-phases.dto";
 import type { EapRepos } from "../repositories/contracts";
+import { presentPhaseList } from "./phase-rollup";
 import { assertCanView, loadProjectAccess } from "./shared";
 
 export function makeListPhasesUseCase(deps: { repos: EapRepos }) {
@@ -9,6 +9,6 @@ export function makeListPhasesUseCase(deps: { repos: EapRepos }) {
     assertCanView(context);
 
     const phases = await deps.repos.phases.listByProject(projectId);
-    return { data: phases.map(toEapPhaseDto) };
+    return presentPhaseList(deps.repos, projectId, phases);
   };
 }

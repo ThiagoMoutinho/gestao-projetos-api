@@ -6,6 +6,7 @@ import { assertEvidenceParentInProject } from "./evidence-parent";
 import {
   assertCanRegisterEvidenceOn,
   assertCanView,
+  evidenceLockedError,
   evidenceNotFoundError,
   loadProjectAccess,
 } from "./shared";
@@ -29,6 +30,9 @@ export function makeUpdateEvidenceUseCase(deps: {
     }
     const parent = await assertEvidenceParentInProject(deps.repos, projectId, current);
     assertCanRegisterEvidenceOn(context, parent);
+    if (current.deliveryId) {
+      throw evidenceLockedError();
+    }
 
     return deps.runInTransaction(async (txRepos) => {
       const stillThere = await txRepos.evidences.findByIdAndProject(evidenceId, projectId);
@@ -42,7 +46,7 @@ export function makeUpdateEvidenceUseCase(deps: {
       });
 
       if (!updated) {
-        throw evidenceNotFoundError();
+        throw stillThere.deliveryId ? evidenceLockedError() : evidenceNotFoundError();
       }
 
       await txRepos.audit.create({

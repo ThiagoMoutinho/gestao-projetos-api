@@ -67,7 +67,7 @@ describe("UpdateTaskProgress", () => {
       "project-1",
       phase.id,
       task.id,
-      { progressPercent: 40, status: "EM_ANDAMENTO" },
+      { progressPercent: 40 },
     );
     assert.equal(updated.progressPercent, 40);
     assert.equal(updated.status, "EM_ANDAMENTO");
@@ -123,10 +123,8 @@ describe("UpdateTaskProgress", () => {
 
     const updated = await updateProgress(actor("GESTOR", "dev-1"), "project-1", phase.id, task.id, {
       progressPercent: 100,
-      status: "CONCLUIDA",
       actualStartAt: "2026-01-02T00:00:00.000Z",
       actualEndAt: "2026-01-20T00:00:00.000Z",
-      hasImpediment: false,
     });
 
     assert.equal(updated.status, "CONCLUIDA");
@@ -136,10 +134,13 @@ describe("UpdateTaskProgress", () => {
     assert.equal(updated.plannedStartAt, task.plannedStartAt);
     assert.equal(updated.baselineStartAt, task.baselineStartAt);
     assert.equal(store.projects[0].status, "NAO_INICIADO");
-    assert.equal((store.auditLogs.at(-1)?.payload as { kind?: string }).kind, "PROGRESS");
+    const progressAudit = store.auditLogs.find(
+      (log) => (log.payload as { kind?: string }).kind === "PROGRESS",
+    );
+    assert.ok(progressAudit);
   });
 
-  it("rejeita CONCLUIDA sem percentual 100, datas reais inválidas e tarefa de outro projeto", async () => {
+  it("rejeita datas reais inválidas e tarefa de outro projeto", async () => {
     const store = createEapInMemoryStore({
       users: [makeUser({ id: "pmo-1", role: "PMO" })],
       projects: [
@@ -155,24 +156,19 @@ describe("UpdateTaskProgress", () => {
       repos,
       runInTransaction: runner,
     });
-    const phaseA = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase A" });
-    const phaseB = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Fase B" });
+    const phaseA = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase A" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phaseB = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Fase B" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
     const taskA = await createTask(actor("PMO", "pmo-1"), "project-1", phaseA.id, {
       title: "Tarefa A",
-    });
+    
+    plannedStartAt: "2026-06-01T15:00:00.000Z",
+    plannedEndAt: "2026-06-30T15:00:00.000Z"});
     const taskB = await createTask(actor("PMO", "pmo-1"), "project-2", phaseB.id, {
       title: "Tarefa B",
-    });
+    
+    plannedStartAt: "2026-06-01T15:00:00.000Z",
+    plannedEndAt: "2026-06-30T15:00:00.000Z"});
 
-    await assert.rejects(
-      () =>
-        updateProgress(actor("PMO", "pmo-1"), "project-1", phaseA.id, taskA.id, {
-          status: "CONCLUIDA",
-          progressPercent: 80,
-        }),
-      (error: unknown) =>
-        error instanceof HttpError && error.code === "TASK_CONCLUDED_PROGRESS_INVALID",
-    );
     await assert.rejects(
       () =>
         updateProgress(actor("PMO", "pmo-1"), "project-1", phaseA.id, taskA.id, {
@@ -201,9 +197,11 @@ describe("UpdateTaskProgress", () => {
     const percent = updateTaskProgressBodySchema.safeParse({
       progressPercent: 120,
     });
+    const status = updateTaskProgressBodySchema.safeParse({ status: "CONCLUIDA" });
 
     assert.equal(planned.success, false);
     assert.equal(baseline.success, false);
     assert.equal(percent.success, false);
+    assert.equal(status.success, false);
   });
 });

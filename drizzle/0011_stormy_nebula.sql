@@ -1,0 +1,1 @@
+ALTER TABLE "eap_milestones" ADD COLUMN "validated_at" timestamp;

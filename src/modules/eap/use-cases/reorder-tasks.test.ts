@@ -33,8 +33,8 @@ describe("ReorderTasks", () => {
     );
     const createTask = makeCreateTaskUseCase({ repos, runInTransaction: runner });
     const reorder = makeReorderTasksUseCase({ repos, runInTransaction: runner });
-    const first = await createTask(actor("PMO"), "project-1", phase.id, { title: "Tarefa A" });
-    const second = await createTask(actor("PMO"), "project-1", phase.id, { title: "Tarefa B" });
+    const first = await createTask(actor("PMO"), "project-1", phase.id, { title: "Tarefa A" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const second = await createTask(actor("PMO"), "project-1", phase.id, { title: "Tarefa B" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
 
     const result = await reorder(actor("PMO"), "project-1", phase.id, [
       { taskId: second.id, sortOrder: 0 },
@@ -65,8 +65,8 @@ describe("ReorderTasks", () => {
     );
     const createTask = makeCreateTaskUseCase({ repos, runInTransaction: runner });
     const reorder = makeReorderTasksUseCase({ repos, runInTransaction: runner });
-    const first = await createTask(actor("PMO"), "project-1", phase.id, { title: "Tarefa A" });
-    await createTask(actor("PMO"), "project-1", phase.id, { title: "Tarefa B" });
+    const first = await createTask(actor("PMO"), "project-1", phase.id, { title: "Tarefa A" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    await createTask(actor("PMO"), "project-1", phase.id, { title: "Tarefa B" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
 
     await assert.rejects(
       () => reorder(actor("PMO"), "project-1", phase.id, [{ taskId: first.id, sortOrder: 0 }]),

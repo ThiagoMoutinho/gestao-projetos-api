@@ -2,20 +2,28 @@ import { HttpError } from "../../../lib/http-error";
 import type { AuthUser } from "../../../lib/session";
 import type { ProjectAccessContext } from "../../projects/projects.authorization";
 import {
+  canAuthorizeEapMilestoneResubmission,
+  canBeEapMilestoneReviewer,
   canCreateEapItems,
+  canDecideEapTaskStatus,
+  canDeleteEapItem,
+  canSuspendEapPhase,
   canDeliverEapMilestone,
   canEditEapItem,
+  canHomologateEapMilestone,
   canManageEapPhases,
   canRegisterEapEvidence,
   canRegisterEapEvidenceOn,
-  canReviewEapMilestone,
+  canRescheduleEap,
   canStructureEapMilestones,
   canStructureEapTasks,
   canUpdateEapTaskProgress,
   canViewProject,
   type EapEvidenceParentAccess,
 } from "../eap.authorization";
+import type { EapMilestoneRow } from "../dtos/eap-milestones.dto";
 import type { EapRepos } from "../repositories/contracts";
+import { isFutureCivilDate } from "./eap-status";
 
 export async function loadProjectAccess(
   repos: EapRepos,
@@ -55,6 +63,36 @@ export function assertCanManagePhases(context: ProjectAccessContext) {
       403,
       "Você não tem permissão para gerenciar as fases deste projeto.",
       "PHASE_MANAGE_FORBIDDEN",
+    );
+  }
+}
+
+export function assertCanDeleteItem(context: ProjectAccessContext) {
+  if (!canDeleteEapItem(context)) {
+    throw new HttpError(
+      403,
+      "Somente a gestão do projeto pode excluir itens da EAP.",
+      "EAP_DELETE_FORBIDDEN",
+    );
+  }
+}
+
+export function assertCanDecideTaskStatus(context: ProjectAccessContext) {
+  if (!canDecideEapTaskStatus(context)) {
+    throw new HttpError(
+      403,
+      "Somente a gestão do projeto pode cancelar ou reativar tarefas.",
+      "TASK_STATUS_DECISION_FORBIDDEN",
+    );
+  }
+}
+
+export function assertCanSuspendPhase(context: ProjectAccessContext) {
+  if (!canSuspendEapPhase(context)) {
+    throw new HttpError(
+      403,
+      "Somente a gestão do projeto pode suspender ou retomar a fase.",
+      "PHASE_SUSPEND_FORBIDDEN",
     );
   }
 }
@@ -187,12 +225,85 @@ export function assertCanRegisterEvidence(context: ProjectAccessContext) {
   }
 }
 
-export function assertCanReviewMilestone(context: ProjectAccessContext) {
-  if (!canReviewEapMilestone(context)) {
+export function assertCanHomologateMilestone(
+  context: ProjectAccessContext,
+  milestone: { reviewerId: string | null },
+) {
+  if (!canHomologateEapMilestone(context, milestone)) {
     throw new HttpError(
       403,
-      "Você não tem permissão para decidir sobre este marco.",
+      milestone.reviewerId
+        ? "Somente o homologador designado pode decidir sobre este marco."
+        : "Somente a gestão vinculada ao projeto pode decidir sobre este marco.",
       "MILESTONE_REVIEW_FORBIDDEN",
+    );
+  }
+}
+
+export function assertCanAuthorizeResubmission(context: ProjectAccessContext) {
+  if (!canAuthorizeEapMilestoneResubmission(context)) {
+    throw new HttpError(
+      403,
+      "Somente o PMO ou a gestão do projeto pode autorizar nova submissão.",
+      "MILESTONE_RESUBMISSION_FORBIDDEN",
+    );
+  }
+}
+
+export function assertCanRescheduleEap(context: ProjectAccessContext) {
+  if (!canRescheduleEap(context)) {
+    throw new HttpError(
+      403,
+      "Somente o PMO, o administrador ou a gestão do projeto pode reprogramar prazos.",
+      "SCHEDULE_RESCHEDULE_FORBIDDEN",
+    );
+  }
+}
+
+/** Entrega e homologação seguem rodadas de envio e decisão; aprovação é decidida diretamente. */
+export function usesDeliveryRounds(type: EapMilestoneRow["type"]) {
+  return type === "ENTREGA" || type === "HOMOLOGACAO";
+}
+
+/** A designação de homologador é decisão da gestão e exige participante que não seja fornecedor. */
+export async function assertValidMilestoneReviewer(
+  repos: EapRepos,
+  context: ProjectAccessContext,
+  projectId: string,
+  reviewerId: string | null | undefined,
+) {
+  if (reviewerId === undefined) {
+    return;
+  }
+
+  if (!canStructureEapMilestones(context)) {
+    throw new HttpError(
+      403,
+      "Somente a gestão do projeto pode designar o homologador do marco.",
+      "MILESTONE_REVIEWER_FORBIDDEN",
+    );
+  }
+
+  if (reviewerId === null) {
+    return;
+  }
+
+  const reviewer = await repos.users.findById(reviewerId);
+  if (!reviewer) {
+    throw new HttpError(404, "Usuário não encontrado.", "USER_NOT_FOUND");
+  }
+
+  const memberRoles = await repos.members.findRoles(projectId, reviewerId);
+  const eligible = canBeEapMilestoneReviewer({
+    globalRole: reviewer.role,
+    isOwner: reviewerId === context.ownerId,
+    memberRoles,
+  });
+  if (!eligible) {
+    throw new HttpError(
+      400,
+      "O homologador deve participar do projeto e não pode atuar como fornecedor.",
+      "MILESTONE_REVIEWER_INVALID",
     );
   }
 }
@@ -266,6 +377,26 @@ export function assertPlannedDates(start: Date | null, end: Date | null) {
   }
 }
 
+/** Criação de fase ou tarefa. Registros antigos sem datas seguem pelo fluxo de planejamento. */
+export function assertRequiredPlannedRange(start: Date | null, end: Date | null) {
+  if (!start || !end) {
+    throw new HttpError(
+      400,
+      "Informe o início e o término planejados.",
+      "PLANNED_DATES_REQUIRED",
+    );
+  }
+
+  assertPlannedDates(start, end);
+}
+
+/** Criação de marco. A primeira definição posterior continua disponível para registros antigos. */
+export function assertRequiredPlannedDate(value: Date | null) {
+  if (!value) {
+    throw new HttpError(400, "Informe a data planejada.", "PLANNED_DATE_REQUIRED");
+  }
+}
+
 export function assertActualDates(start: Date | null, end: Date | null) {
   if (end && !start) {
     throw new HttpError(
@@ -284,12 +415,12 @@ export function assertActualDates(start: Date | null, end: Date | null) {
   }
 }
 
-export function assertConcludedProgress(status: string, progressPercent: number) {
-  if (status === "CONCLUIDA" && progressPercent !== 100) {
+export function assertActualDateNotFuture(value: Date | null) {
+  if (value && isFutureCivilDate(value)) {
     throw new HttpError(
       400,
-      "Tarefa concluída deve ter percentual 100.",
-      "TASK_CONCLUDED_PROGRESS_INVALID",
+      "Datas realizadas não podem estar no futuro.",
+      "TASK_ACTUAL_DATE_FUTURE",
     );
   }
 }
@@ -317,6 +448,20 @@ export const milestoneSelfReviewError = () =>
     "MILESTONE_SELF_REVIEW_FORBIDDEN",
   );
 
+export const milestoneResubmissionNotAuthorizedError = () =>
+  new HttpError(
+    409,
+    "A entrega foi rejeitada. Uma nova submissão depende de autorização do PMO ou da gestão do projeto.",
+    "MILESTONE_RESUBMISSION_NOT_AUTHORIZED",
+  );
+
+export const evidenceLockedError = () =>
+  new HttpError(
+    409,
+    "Evidência enviada em uma rodada de homologação não pode ser alterada. Registre uma nova evidência.",
+    "EVIDENCE_LOCKED",
+  );
+
 export const evidenceNotFoundError = () =>
   new HttpError(404, "Evidência não encontrada neste projeto.", "EVIDENCE_NOT_FOUND");
 
@@ -333,6 +478,9 @@ export const milestoneDeliveredByMissingError = () =>
     "A entrega atual não possui responsável registrado. A decisão foi bloqueada.",
     "MILESTONE_DELIVERED_BY_MISSING",
   );
+
+export const deleteBlockedError = (message: string, code: string) =>
+  new HttpError(409, message, code);
 
 export const duplicateSortOrderError = () =>
   new HttpError(

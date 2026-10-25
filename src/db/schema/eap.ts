@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   check,
   index,
@@ -34,6 +35,7 @@ export const eapTaskStatusEnum = pgEnum("eap_task_status", [
 export const eapMilestoneTypeEnum = pgEnum("eap_milestone_type", [
   "ENTREGA",
   "APROVACAO",
+  "HOMOLOGACAO",
 ]);
 
 export const eapMilestoneStatusEnum = pgEnum("eap_milestone_status", [
@@ -41,6 +43,14 @@ export const eapMilestoneStatusEnum = pgEnum("eap_milestone_status", [
   "ENTREGUE",
   "APROVADO",
   "REJEITADO",
+  "AJUSTES_SOLICITADOS",
+]);
+
+export const eapMilestoneDeliveryStatusEnum = pgEnum("eap_milestone_delivery_status", [
+  "EM_ANALISE",
+  "ACEITA",
+  "AJUSTES_SOLICITADOS",
+  "REJEITADA",
 ]);
 
 export const eapScheduleFieldEnum = pgEnum("eap_schedule_field", [
@@ -70,6 +80,7 @@ export const eapAuditActionEnum = pgEnum("eap_audit_action", [
   "VALIDATE",
   "IMPEDE",
   "CLEAR_IMPEDIMENT",
+  "DELETE",
 ]);
 
 const exclusiveScheduleTargetChk = (
@@ -173,6 +184,11 @@ export const eapTasks = pgTable(
     actualStartAt: timestamp("actual_start_at"),
     actualEndAt: timestamp("actual_end_at"),
     hasImpediment: boolean("has_impediment").default(false).notNull(),
+    /** Tarefa corretiva aberta para atender às correções solicitadas na homologação do marco. */
+    correctiveMilestoneId: text("corrective_milestone_id").references(
+      (): AnyPgColumn => eapMilestones.id,
+      { onDelete: "set null" },
+    ),
     createdBy: text("created_by")
       .notNull()
       .references(() => user.id),
@@ -190,6 +206,7 @@ export const eapTasks = pgTable(
     check("eap_tasks_sort_order_chk", sql`${table.sortOrder} >= 0`),
     index("eap_tasks_phase_id_idx").on(table.phaseId),
     index("eap_tasks_assignee_id_idx").on(table.assigneeId),
+    index("eap_tasks_corrective_milestone_id_idx").on(table.correctiveMilestoneId),
     index("eap_tasks_status_planned_end_idx").on(table.status, table.plannedEndAt),
     check(
       "eap_tasks_progress_percent_chk",
@@ -233,6 +250,8 @@ export const eapMilestones = pgTable(
     deliveredBy: text("delivered_by").references(() => user.id),
     validatedBy: text("validated_by").references(() => user.id),
     validationNote: text("validation_note"),
+    validatedAt: timestamp("validated_at"),
+    reviewerId: text("reviewer_id").references(() => user.id),
     createdBy: text("created_by")
       .notNull()
       .references(() => user.id),
@@ -251,6 +270,82 @@ export const eapMilestones = pgTable(
     index("eap_milestones_phase_id_idx").on(table.phaseId),
     index("eap_milestones_status_planned_at_idx").on(table.status, table.plannedAt),
     index("eap_milestones_delivered_by_idx").on(table.deliveredBy),
+    index("eap_milestones_reviewer_id_idx").on(table.reviewerId),
+  ],
+);
+
+/**
+ * Rodadas de homologação de marcos de entrega. Cada envio gera uma rodada; decisões e autorizações
+ * de reenvio são gravadas na própria rodada e nunca sobrescrevem rodadas anteriores.
+ * `legacy` identifica a rodada criada a partir de uma entrega anterior ao controle de rodadas.
+ */
+export const eapMilestoneDeliveries = pgTable(
+  "eap_milestone_deliveries",
+  {
+    id: text("id").primaryKey(),
+    milestoneId: text("milestone_id")
+      .notNull()
+      .references(() => eapMilestones.id, { onDelete: "cascade" }),
+    round: integer("round").notNull(),
+    legacy: boolean("legacy").default(false).notNull(),
+    status: eapMilestoneDeliveryStatusEnum("status").default("EM_ANALISE").notNull(),
+    submittedBy: text("submitted_by")
+      .notNull()
+      .references(() => user.id),
+    submittedAt: timestamp("submitted_at"),
+    note: text("note"),
+    decidedBy: text("decided_by").references(() => user.id),
+    decidedAt: timestamp("decided_at"),
+    decisionNote: text("decision_note"),
+    nonconformities: text("nonconformities"),
+    adjustments: text("adjustments"),
+    resubmissionAuthorizedBy: text("resubmission_authorized_by").references(() => user.id),
+    resubmissionAuthorizedAt: timestamp("resubmission_authorized_at"),
+    resubmissionNote: text("resubmission_note"),
+  },
+  (table) => [
+    unique("eap_milestone_deliveries_round_unique").on(table.milestoneId, table.round),
+    index("eap_milestone_deliveries_milestone_id_idx").on(table.milestoneId),
+    uniqueIndex("eap_milestone_deliveries_open_idx")
+      .on(table.milestoneId)
+      .where(sql`${table.status} = 'EM_ANALISE'`),
+    check("eap_milestone_deliveries_round_chk", sql`${table.round} >= 1`),
+    check(
+      "eap_milestone_deliveries_submitted_at_chk",
+      sql`${table.legacy} OR ${table.submittedAt} IS NOT NULL`,
+    ),
+    check(
+      "eap_milestone_deliveries_decision_chk",
+      sql`(
+        (
+          ${table.status} = 'EM_ANALISE'
+          AND ${table.decidedBy} IS NULL
+          AND ${table.decidedAt} IS NULL
+        ) OR (
+          ${table.status} = 'ACEITA'
+          AND ${table.decidedBy} IS NOT NULL
+          AND ${table.decidedAt} IS NOT NULL
+        ) OR (
+          ${table.status} IN ('AJUSTES_SOLICITADOS', 'REJEITADA')
+          AND ${table.decidedBy} IS NOT NULL
+          AND ${table.decidedAt} IS NOT NULL
+          AND char_length(btrim(${table.decisionNote})) >= 10
+        )
+      )`,
+    ),
+    check(
+      "eap_milestone_deliveries_resubmission_chk",
+      sql`(
+        ${table.resubmissionAuthorizedAt} IS NULL
+        AND ${table.resubmissionAuthorizedBy} IS NULL
+        AND ${table.resubmissionNote} IS NULL
+      ) OR (
+        ${table.status} = 'REJEITADA'
+        AND ${table.resubmissionAuthorizedAt} IS NOT NULL
+        AND ${table.resubmissionAuthorizedBy} IS NOT NULL
+        AND char_length(btrim(${table.resubmissionNote})) >= 10
+      )`,
+    ),
   ],
 );
 
@@ -399,12 +494,16 @@ export const eapEvidences = pgTable(
     ),
     title: text("title").notNull(),
     url: text("url").notNull(),
+    deliveryId: text("delivery_id").references(() => eapMilestoneDeliveries.id, {
+      onDelete: "set null",
+    }),
     createdBy: text("created_by")
       .notNull()
       .references(() => user.id),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
+    index("eap_evidences_delivery_id_idx").on(table.deliveryId),
     index("eap_evidences_phase_id_idx").on(table.phaseId),
     index("eap_evidences_task_id_idx").on(table.taskId),
     index("eap_evidences_milestone_id_idx").on(table.milestoneId),
@@ -539,9 +638,26 @@ export const eapMilestonesRelations = relations(eapMilestones, ({ one, many }) =
     references: [user.id],
     relationName: "eap_milestones_validated_by",
   }),
+  reviewer: one(user, {
+    fields: [eapMilestones.reviewerId],
+    references: [user.id],
+    relationName: "eap_milestones_reviewer",
+  }),
+  deliveries: many(eapMilestoneDeliveries),
   evidences: many(eapEvidences),
   scheduleRequests: many(eapScheduleRequests),
 }));
+
+export const eapMilestoneDeliveriesRelations = relations(
+  eapMilestoneDeliveries,
+  ({ one, many }) => ({
+    milestone: one(eapMilestones, {
+      fields: [eapMilestoneDeliveries.milestoneId],
+      references: [eapMilestones.id],
+    }),
+    evidences: many(eapEvidences),
+  }),
+);
 
 export const eapScheduleRequestsRelations = relations(
   eapScheduleRequests,
@@ -621,6 +737,10 @@ export const eapEvidencesRelations = relations(eapEvidences, ({ one }) => ({
   scheduleRequest: one(eapScheduleRequests, {
     fields: [eapEvidences.scheduleRequestId],
     references: [eapScheduleRequests.id],
+  }),
+  delivery: one(eapMilestoneDeliveries, {
+    fields: [eapEvidences.deliveryId],
+    references: [eapMilestoneDeliveries.id],
   }),
   createdByUser: one(user, {
     fields: [eapEvidences.createdBy],

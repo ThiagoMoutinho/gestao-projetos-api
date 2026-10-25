@@ -36,11 +36,13 @@ describe("ReorderMilestones", () => {
     const first = await createMilestone(actor("PMO"), "project-1", phase.id, {
       title: "Marco A",
       type: "ENTREGA",
-    });
+    
+    plannedAt: "2026-06-15T15:00:00.000Z"});
     const second = await createMilestone(actor("PMO"), "project-1", phase.id, {
       title: "Marco B",
       type: "APROVACAO",
-    });
+    
+    plannedAt: "2026-06-15T15:00:00.000Z"});
 
     const result = await reorder(actor("PMO"), "project-1", phase.id, [
       { milestoneId: second.id, sortOrder: 0 },
@@ -74,11 +76,13 @@ describe("ReorderMilestones", () => {
     const first = await createMilestone(actor("PMO"), "project-1", phase.id, {
       title: "Marco A",
       type: "ENTREGA",
-    });
+    
+    plannedAt: "2026-06-15T15:00:00.000Z"});
     await createMilestone(actor("PMO"), "project-1", phase.id, {
       title: "Marco B",
       type: "ENTREGA",
-    });
+    
+    plannedAt: "2026-06-15T15:00:00.000Z"});
 
     await assert.rejects(
       () => reorder(actor("PMO"), "project-1", phase.id, [{ milestoneId: first.id, sortOrder: 0 }]),

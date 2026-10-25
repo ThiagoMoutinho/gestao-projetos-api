@@ -1,17 +1,21 @@
+import { HttpError } from "../../../lib/http-error";
 import type { AuthUser } from "../../../lib/session";
 import type { CreateTaskInput } from "../dtos/eap-tasks.dto";
 import { toEapTaskDto } from "../dtos/eap-tasks.dto";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
+import { syncPhaseStatus } from "./phase-rollup";
 import {
   assertCanCreateItems,
   assertCanView,
-  assertConcludedProgress,
-  assertPlannedDates,
+  assertRequiredPlannedRange,
   assertValidAssignee,
+  loadMilestoneInPhase,
   loadPhaseInProject,
   loadProjectAccess,
   parseOptionalDate,
 } from "./shared";
+
+const CORRECTION_STATUSES = new Set(["AJUSTES_SOLICITADOS", "REJEITADO"]);
 
 export function makeCreateTaskUseCase(deps: {
   repos: EapRepos;
@@ -30,13 +34,21 @@ export function makeCreateTaskUseCase(deps: {
 
     const plannedStartAt = parseOptionalDate(input.plannedStartAt);
     const plannedEndAt = parseOptionalDate(input.plannedEndAt);
-    assertPlannedDates(plannedStartAt, plannedEndAt);
-
-    const status = input.status ?? "NAO_INICIADA";
-    const progressPercent = status === "CONCLUIDA" ? 100 : 0;
-    assertConcludedProgress(status, progressPercent);
+    assertRequiredPlannedRange(plannedStartAt, plannedEndAt);
 
     await assertValidAssignee(deps.repos, projectId, project.ownerId, input.assigneeId);
+
+    const correctiveMilestoneId = input.correctiveMilestoneId ?? null;
+    if (correctiveMilestoneId) {
+      const milestone = await loadMilestoneInPhase(deps.repos, phaseId, correctiveMilestoneId);
+      if (!CORRECTION_STATUSES.has(milestone.status)) {
+        throw new HttpError(
+          409,
+          "Tarefas corretivas só podem ser vinculadas a marcos com correções necessárias ou rejeitados.",
+          "TASK_CORRECTIVE_MILESTONE_INVALID",
+        );
+      }
+    }
 
     const created = await deps.runInTransaction(async (txRepos) => {
       const [taskMax, milestoneMax] = await Promise.all([
@@ -50,13 +62,14 @@ export function makeCreateTaskUseCase(deps: {
         description: input.description ?? null,
         sortOrder: Math.max(taskMax ?? -1, milestoneMax ?? -1) + 1,
         assigneeId: input.assigneeId ?? null,
-        status,
-        progressPercent,
+        status: "NAO_INICIADA",
+        progressPercent: 0,
         weight: input.weight ?? 1,
         plannedStartAt,
         plannedEndAt,
         baselineStartAt: plannedStartAt,
         baselineEndAt: plannedEndAt,
+        correctiveMilestoneId,
         createdBy: actor.id,
         updatedBy: actor.id,
       });
@@ -77,8 +90,16 @@ export function makeCreateTaskUseCase(deps: {
           plannedEndAt: task.plannedEndAt?.toISOString() ?? null,
           baselineStartAt: task.baselineStartAt?.toISOString() ?? null,
           baselineEndAt: task.baselineEndAt?.toISOString() ?? null,
+          correctiveMilestoneId,
         },
         actorId: actor.id,
+      });
+
+      await syncPhaseStatus(txRepos, {
+        projectId,
+        phaseId,
+        actorId: actor.id,
+        cause: `Tarefa "${task.title}" criada.`,
       });
 
       return task;

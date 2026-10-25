@@ -31,6 +31,7 @@ export type EapEvidenceDto = {
   scheduleRequestId: string | null;
   title: string;
   url: string;
+  deliveryId: string | null;
   createdBy: string;
   createdAt: string;
 };
@@ -44,6 +45,7 @@ export function toEapEvidenceDto(row: EapEvidenceRow): EapEvidenceDto {
     scheduleRequestId: row.scheduleRequestId,
     title: row.title,
     url: row.url,
+    deliveryId: row.deliveryId,
     createdBy: row.createdBy,
     createdAt: row.createdAt.toISOString(),
   };

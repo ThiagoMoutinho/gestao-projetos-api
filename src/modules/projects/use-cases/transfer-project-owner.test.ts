@@ -8,6 +8,7 @@ import {
   makeInMemoryRepos,
   makeInMemoryTransactionRunner,
   makeUser,
+  noPlan,
 } from "../test/in-memory";
 import { makeTransferProjectOwnerUseCase } from "./transfer-project-owner";
 
@@ -31,6 +32,7 @@ describe("TransferProjectOwner", () => {
           glpiTicketId: null,
           ownerId: "owner-1",
           status: "NAO_INICIADO",
+          ...noPlan,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -82,6 +84,7 @@ describe("TransferProjectOwner", () => {
           glpiTicketId: null,
           ownerId: "owner-1",
           status: "NAO_INICIADO",
+          ...noPlan,
           createdAt: new Date(),
           updatedAt: new Date(),
         },

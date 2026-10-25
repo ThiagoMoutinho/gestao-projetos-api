@@ -40,6 +40,10 @@ export type ProjectDto = {
   glpiTicketId: string | null;
   ownerId: string;
   status: ProjectRow["status"];
+  baselineStartAt: string | null;
+  baselineEndAt: string | null;
+  plannedStartAt: string | null;
+  plannedEndAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -85,6 +89,10 @@ export function toProjectDto(row: ProjectRow): ProjectDto {
     glpiTicketId: row.glpiTicketId,
     ownerId: row.ownerId,
     status: row.status,
+    baselineStartAt: row.baselineStartAt?.toISOString() ?? null,
+    baselineEndAt: row.baselineEndAt?.toISOString() ?? null,
+    plannedStartAt: row.plannedStartAt?.toISOString() ?? null,
+    plannedEndAt: row.plannedEndAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

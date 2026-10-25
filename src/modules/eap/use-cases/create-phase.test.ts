@@ -38,7 +38,9 @@ describe("CreatePhase", () => {
       const { createPhase } = setup(role);
       const phase = await createPhase(actor(role), "project-1", {
         name: "Diagnóstico",
-      });
+      
+      plannedStartAt: "2026-06-01T15:00:00.000Z",
+      plannedEndAt: "2026-06-30T15:00:00.000Z"});
       assert.equal(phase.name, "Diagnóstico");
       assert.equal(phase.projectId, "project-1");
       assert.equal(phase.sortOrder, 0);
@@ -66,7 +68,9 @@ describe("CreatePhase", () => {
 
     const phase = await createPhase(actor("GESTOR", "gestor-1"), "project-1", {
       name: "Execução",
-    });
+    
+    plannedStartAt: "2026-06-01T15:00:00.000Z",
+    plannedEndAt: "2026-06-30T15:00:00.000Z"});
     assert.equal(phase.name, "Execução");
   });
 
@@ -119,15 +123,17 @@ describe("CreatePhase", () => {
 
     const phase = await createPhase(actor("FORNECEDOR", "forn-1"), "project-1", {
       name: "Fase do fornecedor",
-    });
+    
+    plannedStartAt: "2026-06-01T15:00:00.000Z",
+    plannedEndAt: "2026-06-30T15:00:00.000Z"});
     assert.equal(phase.createdBy, "forn-1");
 
     await assert.rejects(
-      () => createPhase(actor("GESTOR", "obs-1"), "project-1", { name: "Fase X" }),
+      () => createPhase(actor("GESTOR", "obs-1"), "project-1", { name: "Fase X" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"}),
       (error: unknown) => error instanceof HttpError && error.code === "EAP_CREATE_FORBIDDEN",
     );
     await assert.rejects(
-      () => createPhase(actor("COLABORADOR", "outsider-1"), "project-1", { name: "Fase Y" }),
+      () => createPhase(actor("COLABORADOR", "outsider-1"), "project-1", { name: "Fase Y" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"}),
       (error: unknown) => error instanceof HttpError && error.code === "PROJECT_FORBIDDEN",
     );
   });

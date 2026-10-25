@@ -6,7 +6,7 @@ import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import {
   assertCanCreateItems,
   assertCanView,
-  assertPlannedDates,
+  assertRequiredPlannedRange,
   assertValidAssignee,
   duplicateSortOrderError,
   loadProjectAccess,
@@ -29,7 +29,7 @@ export function makeCreatePhaseUseCase(deps: {
 
     const plannedStartAt = parseOptionalDate(input.plannedStartAt);
     const plannedEndAt = parseOptionalDate(input.plannedEndAt);
-    assertPlannedDates(plannedStartAt, plannedEndAt);
+    assertRequiredPlannedRange(plannedStartAt, plannedEndAt);
 
     const responsibleId = input.responsibleId ?? null;
     await assertValidAssignee(
@@ -53,7 +53,7 @@ export function makeCreatePhaseUseCase(deps: {
           name: input.name,
           description: input.description ?? null,
           sortOrder,
-          status: input.status ?? "NAO_INICIADA",
+          status: "NAO_INICIADA",
           responsibleId,
           completionCriteria,
           plannedStartAt,
@@ -86,7 +86,10 @@ export function makeCreatePhaseUseCase(deps: {
         return phase;
       });
 
-      return toEapPhaseDto(created);
+      return toEapPhaseDto(created, {
+        calculatedStatus: "NAO_INICIADA",
+        progress: { state: "EMPTY", basisPoints: null },
+      });
     } catch (error) {
       if (error instanceof UniqueConstraintError) {
         throw duplicateSortOrderError();

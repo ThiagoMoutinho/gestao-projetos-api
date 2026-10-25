@@ -77,6 +77,7 @@ export const eapEvidenceSchema = z.object({
   scheduleRequestId: z.string().nullable(),
   title: z.string(),
   url: z.string(),
+  deliveryId: z.string().nullable(),
   createdBy: z.string(),
   createdAt: z.string(),
 });

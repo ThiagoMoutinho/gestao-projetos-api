@@ -1,5 +1,5 @@
 import type { eapTasks } from "../../../db/schema";
-import type { EapTaskStatus } from "../schemas/eap-tasks.schema";
+import { calculatedTaskStatus } from "../use-cases/eap-status";
 
 export type EapTaskRow = typeof eapTasks.$inferSelect;
 
@@ -8,9 +8,9 @@ export type CreateTaskInput = {
   description?: string | null;
   assigneeId?: string | null;
   weight?: number;
-  status?: EapTaskStatus;
   plannedStartAt?: string | null;
   plannedEndAt?: string | null;
+  correctiveMilestoneId?: string | null;
 };
 
 export type UpdateTaskInput = {
@@ -22,10 +22,12 @@ export type UpdateTaskInput = {
 
 export type UpdateTaskProgressInput = {
   progressPercent?: number;
-  status?: EapTaskStatus;
   actualStartAt?: string | null;
   actualEndAt?: string | null;
-  hasImpediment?: boolean;
+};
+
+export type TaskStatusDecisionInput = {
+  justification: string;
 };
 
 export type EapTaskDto = {
@@ -45,6 +47,8 @@ export type EapTaskDto = {
   actualStartAt: string | null;
   actualEndAt: string | null;
   hasImpediment: boolean;
+  correctiveMilestoneId: string | null;
+  calculatedStatus: EapTaskRow["status"];
   createdBy: string;
   updatedBy: string;
   createdAt: string;
@@ -73,6 +77,8 @@ export function toEapTaskDto(row: EapTaskRow): EapTaskDto {
     actualStartAt: toIso(row.actualStartAt),
     actualEndAt: toIso(row.actualEndAt),
     hasImpediment: row.hasImpediment,
+    correctiveMilestoneId: row.correctiveMilestoneId,
+    calculatedStatus: calculatedTaskStatus(row),
     createdBy: row.createdBy,
     updatedBy: row.updatedBy,
     createdAt: row.createdAt.toISOString(),

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."eap_audit_action" ADD VALUE 'DELETE';

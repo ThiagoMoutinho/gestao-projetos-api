@@ -7,6 +7,7 @@ import {
   createInMemoryStore,
   makeInMemoryRepos,
   makeUser,
+  noPlan,
 } from "../test/in-memory";
 import { makeGetProjectUseCase } from "./get-project";
 
@@ -29,6 +30,7 @@ describe("GetProject", () => {
           glpiTicketId: null,
           ownerId: "owner-1",
           status: "EM_EXECUCAO",
+          ...noPlan,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -58,6 +60,7 @@ describe("GetProject", () => {
           glpiTicketId: null,
           ownerId: "owner-1",
           status: "EM_EXECUCAO",
+          ...noPlan,
           createdAt: new Date(),
           updatedAt: new Date(),
         },

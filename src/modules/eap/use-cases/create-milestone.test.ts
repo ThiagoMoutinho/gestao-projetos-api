@@ -83,7 +83,8 @@ describe("CreateMilestone", () => {
     const milestone = await createMilestone(actor("FORNECEDOR", "forn-1"), "project-1", phase.id, {
       title: "Marco fornecedor",
       type: "ENTREGA",
-    });
+    
+    plannedAt: "2026-06-15T15:00:00.000Z"});
     assert.equal(milestone.createdBy, "forn-1");
     assert.equal(milestone.status, "PENDENTE");
 
@@ -92,7 +93,8 @@ describe("CreateMilestone", () => {
         createMilestone(actor("GESTOR", "obs-1"), "project-1", phase.id, {
           title: "Marco observador",
           type: "ENTREGA",
-        }),
+        
+        plannedAt: "2026-06-15T15:00:00.000Z"}),
       (error: unknown) => error instanceof HttpError && error.code === "EAP_CREATE_FORBIDDEN",
     );
   });

@@ -15,6 +15,7 @@ import {
 import { makeCreateEvidenceUseCase } from "./create-evidence";
 import { makeCreatePhaseUseCase } from "./create-phase";
 import { makeCreateTaskUseCase } from "./create-task";
+import { makeRegisterImpedimentUseCase } from "./register-impediment";
 import { makeReorderTasksUseCase } from "./reorder-tasks";
 import { makeUpdateTaskUseCase } from "./update-task";
 import { makeUpdateTaskProgressUseCase } from "./update-task-progress";
@@ -86,14 +87,18 @@ describe("UpdateTask", () => {
     const createPhase = makeCreatePhaseUseCase({ repos, runInTransaction: runner });
     const createTask = makeCreateTaskUseCase({ repos, runInTransaction: runner });
     const updateTask = makeUpdateTaskUseCase({ repos, runInTransaction: runner });
-    const phaseA = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase A" });
-    const phaseB = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Fase B" });
+    const phaseA = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase A" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phaseB = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Fase B" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
     const taskA = await createTask(actor("PMO", "pmo-1"), "project-1", phaseA.id, {
       title: "Tarefa A",
-    });
+    
+    plannedStartAt: "2026-06-01T15:00:00.000Z",
+    plannedEndAt: "2026-06-30T15:00:00.000Z"});
     const taskB = await createTask(actor("PMO", "pmo-1"), "project-2", phaseB.id, {
       title: "Tarefa B",
-    });
+    
+    plannedStartAt: "2026-06-01T15:00:00.000Z",
+    plannedEndAt: "2026-06-30T15:00:00.000Z"});
 
     await assert.rejects(
       () =>
@@ -147,7 +152,9 @@ describe("UpdateTask", () => {
     });
     const others = await createTask(actor("PMO", "pmo-1"), "project-1", phase.id, {
       title: "Tarefa do PMO",
-    });
+    
+    plannedStartAt: "2026-06-01T15:00:00.000Z",
+    plannedEndAt: "2026-06-30T15:00:00.000Z"});
 
     const updated = await updateTask(dev, "project-1", phase.id, own.id, { title: "Minha tarefa revisada" });
     assert.equal(updated.title, "Minha tarefa revisada");
@@ -209,10 +216,18 @@ describe("UpdateTask", () => {
       "project-1",
       phase.id,
       task.id,
-      { progressPercent: 40, hasImpediment: true },
+      { progressPercent: 40 },
     );
     assert.equal(progressed.progressPercent, 40);
-    assert.equal(progressed.hasImpediment, true);
+
+    const impeded = await makeRegisterImpedimentUseCase({ repos, runInTransaction: runner })(
+      assignee,
+      "project-1",
+      phase.id,
+      task.id,
+      { description: "Aguardando liberação de acesso." },
+    );
+    assert.equal(impeded.task.hasImpediment, true);
 
     const evidence = await makeCreateEvidenceUseCase({ repos, runInTransaction: runner })(
       assignee,

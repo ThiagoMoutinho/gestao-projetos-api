@@ -19,6 +19,13 @@ const isoDateTimeSchema = z
     message: "Data inválida.",
   });
 
+function requiredIsoDateTime(message: string) {
+  return z
+    .string(message)
+    .min(1, message)
+    .refine((value) => !Number.isNaN(Date.parse(value)), "Data inválida.");
+}
+
 export const taskParamsSchema = z.object({
   id: z.string().min(1),
   phaseId: z.string().min(1),
@@ -31,9 +38,14 @@ export const createTaskBodySchema = z
     description: z.string().trim().max(4000).nullable().optional(),
     assigneeId: z.string().min(1).nullable().optional(),
     weight: z.number().int().min(1).optional(),
-    status: eapTaskStatusSchema.optional(),
-    plannedStartAt: isoDateTimeSchema.nullable().optional(),
-    plannedEndAt: isoDateTimeSchema.nullable().optional(),
+    plannedStartAt: requiredIsoDateTime("Informe o início planejado."),
+    plannedEndAt: requiredIsoDateTime("Informe o término planejado."),
+    correctiveMilestoneId: z
+      .string()
+      .min(1)
+      .nullable()
+      .optional()
+      .describe("Marco da mesma fase com correções pendentes que a tarefa atende."),
   })
   .strict();
 
@@ -51,16 +63,26 @@ export const updateTaskBodySchema = z
 
 export const updateTaskProgressBodySchema = z
   .object({
-    progressPercent: z.number().int().min(0).max(100).optional(),
-    status: eapTaskStatusSchema.optional(),
+    progressPercent: z
+      .number()
+      .int()
+      .min(0)
+      .max(100)
+      .optional()
+      .describe("A situação é derivada: 0% não iniciada, 1–99% em andamento, 100% concluída."),
     actualStartAt: isoDateTimeSchema.nullable().optional(),
     actualEndAt: isoDateTimeSchema.nullable().optional(),
-    hasImpediment: z.boolean().optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {
     message: "Informe ao menos um campo para atualizar.",
   });
+
+export const taskStatusDecisionBodySchema = z
+  .object({
+    justification: z.string().trim().min(10).max(2000),
+  })
+  .strict();
 
 export const eapTaskSchema = z.object({
   id: z.string(),
@@ -79,6 +101,10 @@ export const eapTaskSchema = z.object({
   actualStartAt: z.string().nullable(),
   actualEndAt: z.string().nullable(),
   hasImpediment: z.boolean(),
+  correctiveMilestoneId: z.string().nullable(),
+  calculatedStatus: eapTaskStatusSchema.describe(
+    "Situação pela regra da EAP. Difere de status apenas em registros antigos ainda não reconciliados.",
+  ),
   createdBy: z.string(),
   updatedBy: z.string(),
   createdAt: z.string(),

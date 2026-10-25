@@ -1,6 +1,6 @@
-import { and, asc, eq, max } from "drizzle-orm";
+import { and, asc, count, eq, max } from "drizzle-orm";
 
-import { eapTasks } from "../../../db/schema";
+import { eapImpediments, eapPhases, eapTasks } from "../../../db/schema";
 import type { DbClient } from "../../../db/types";
 import type { EapTasksRepository, EapTaskUpdateRecord, NewEapTaskRecord } from "./contracts";
 
@@ -13,6 +13,17 @@ export class DrizzleEapTasksRepository implements EapTasksRepository {
       .from(eapTasks)
       .where(eq(eapTasks.phaseId, phaseId))
       .orderBy(asc(eapTasks.sortOrder), asc(eapTasks.createdAt));
+  }
+
+  async listByProject(projectId: string) {
+    const rows = await this.client
+      .select({ task: eapTasks })
+      .from(eapTasks)
+      .innerJoin(eapPhases, eq(eapPhases.id, eapTasks.phaseId))
+      .where(eq(eapPhases.projectId, projectId))
+      .orderBy(asc(eapTasks.sortOrder), asc(eapTasks.createdAt));
+
+    return rows.map((row) => row.task);
   }
 
   async findById(taskId: string) {
@@ -85,5 +96,23 @@ export class DrizzleEapTasksRepository implements EapTasksRepository {
       .returning();
 
     return row ?? null;
+  }
+
+  async countImpediments(taskId: string) {
+    const [row] = await this.client
+      .select({ total: count() })
+      .from(eapImpediments)
+      .where(eq(eapImpediments.taskId, taskId));
+
+    return row?.total ?? 0;
+  }
+
+  async delete(taskId: string, phaseId: string) {
+    const rows = await this.client
+      .delete(eapTasks)
+      .where(and(eq(eapTasks.id, taskId), eq(eapTasks.phaseId, phaseId)))
+      .returning({ id: eapTasks.id });
+
+    return rows.length > 0;
   }
 }

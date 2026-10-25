@@ -11,16 +11,21 @@ export type CreateMilestoneInput = {
   description?: string | null;
   type: EapMilestoneType;
   plannedAt?: string | null;
+  reviewerId?: string | null;
 };
 
 export type UpdateMilestoneInput = {
   title?: string;
   description?: string | null;
+  reviewerId?: string | null;
 };
 
 export type ReviewMilestoneInput = {
   decision: EapMilestoneDecision;
   note?: string | null;
+  nonconformities?: string | null;
+  adjustments?: string | null;
+  evidences?: Array<{ title: string; url: string }>;
 };
 
 export type EapMilestoneDto = {
@@ -37,6 +42,8 @@ export type EapMilestoneDto = {
   deliveredBy: string | null;
   validatedBy: string | null;
   validationNote: string | null;
+  validatedAt: string | null;
+  reviewerId: string | null;
   createdBy: string;
   updatedBy: string;
   createdAt: string;
@@ -62,6 +69,8 @@ export function toEapMilestoneDto(row: EapMilestoneRow): EapMilestoneDto {
     deliveredBy: row.deliveredBy,
     validatedBy: row.validatedBy,
     validationNote: row.validationNote,
+    validatedAt: toIso(row.validatedAt),
+    reviewerId: row.reviewerId,
     createdBy: row.createdBy,
     updatedBy: row.updatedBy,
     createdAt: row.createdAt.toISOString(),

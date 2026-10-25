@@ -2,9 +2,12 @@ import type { AuthUser } from "../../../lib/session";
 import type { CreateMilestoneInput } from "../dtos/eap-milestones.dto";
 import { toEapMilestoneDto } from "../dtos/eap-milestones.dto";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
+import { syncPhaseStatus } from "./phase-rollup";
 import {
   assertCanCreateItems,
   assertCanView,
+  assertRequiredPlannedDate,
+  assertValidMilestoneReviewer,
   loadPhaseInProject,
   loadProjectAccess,
   parseOptionalDate,
@@ -24,8 +27,10 @@ export function makeCreateMilestoneUseCase(deps: {
     assertCanView(context);
     assertCanCreateItems(context);
     await loadPhaseInProject(deps.repos, projectId, phaseId);
+    await assertValidMilestoneReviewer(deps.repos, context, projectId, input.reviewerId);
 
     const plannedAt = parseOptionalDate(input.plannedAt);
+    assertRequiredPlannedDate(plannedAt);
 
     const created = await deps.runInTransaction(async (txRepos) => {
       const [taskMax, milestoneMax] = await Promise.all([
@@ -42,6 +47,7 @@ export function makeCreateMilestoneUseCase(deps: {
         status: "PENDENTE",
         plannedAt,
         baselineAt: plannedAt,
+        reviewerId: input.reviewerId ?? null,
         createdBy: actor.id,
         updatedBy: actor.id,
       });
@@ -58,8 +64,16 @@ export function makeCreateMilestoneUseCase(deps: {
           type: milestone.type,
           plannedAt: milestone.plannedAt?.toISOString() ?? null,
           baselineAt: milestone.baselineAt?.toISOString() ?? null,
+          reviewerId: milestone.reviewerId,
         },
         actorId: actor.id,
+      });
+
+      await syncPhaseStatus(txRepos, {
+        projectId,
+        phaseId,
+        actorId: actor.id,
+        cause: `Marco "${milestone.title}" criado.`,
       });
 
       return milestone;

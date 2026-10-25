@@ -41,7 +41,9 @@ async function setup(role: AuthUser["role"] = "PMO") {
   const createTask = makeCreateTaskUseCase({ repos, runInTransaction: runner });
   const phase = await createPhase(actor("PMO", "actor-1"), "project-1", {
     name: "Diagnóstico",
-  });
+  
+  plannedStartAt: "2026-06-01T15:00:00.000Z",
+  plannedEndAt: "2026-06-30T15:00:00.000Z"});
 
   return { store, createTask, phase };
 }
@@ -52,7 +54,9 @@ describe("CreateTask", () => {
       const { createTask, phase } = await setup(role);
       const task = await createTask(actor(role), "project-1", phase.id, {
         title: `Tarefa ${role}`,
-      });
+      
+      plannedStartAt: "2026-06-01T15:00:00.000Z",
+      plannedEndAt: "2026-06-30T15:00:00.000Z"});
       assert.equal(task.title, `Tarefa ${role}`);
       assert.equal(task.phaseId, phase.id);
       assert.equal(task.progressPercent, 0);
@@ -84,7 +88,9 @@ describe("CreateTask", () => {
 
     const task = await createTask(actor("GESTOR", "gestor-1"), "project-1", phase.id, {
       title: "Levantar requisitos",
-    });
+    
+    plannedStartAt: "2026-06-01T15:00:00.000Z",
+    plannedEndAt: "2026-06-30T15:00:00.000Z"});
     assert.equal(task.title, "Levantar requisitos");
   });
 
@@ -149,10 +155,14 @@ describe("CreateTask", () => {
 
     const supplierTask = await createTask(actor("FORNECEDOR", "forn-1"), "project-1", phase.id, {
       title: "Tarefa fornecedor",
-    });
+    
+    plannedStartAt: "2026-06-01T15:00:00.000Z",
+    plannedEndAt: "2026-06-30T15:00:00.000Z"});
     const devTask = await createTask(actor("GESTOR", "dev-1"), "project-1", phase.id, {
       title: "Tarefa desenvolvedor",
-    });
+    
+    plannedStartAt: "2026-06-01T15:00:00.000Z",
+    plannedEndAt: "2026-06-30T15:00:00.000Z"});
     assert.equal(supplierTask.createdBy, "forn-1");
     assert.equal(devTask.createdBy, "dev-1");
 
@@ -160,7 +170,9 @@ describe("CreateTask", () => {
       () =>
         createTask(actor("GESTOR", "obs-1"), "project-1", phase.id, {
           title: "Tarefa observador",
-        }),
+        
+        plannedStartAt: "2026-06-01T15:00:00.000Z",
+        plannedEndAt: "2026-06-30T15:00:00.000Z"}),
       (error: unknown) => error instanceof HttpError && error.code === "EAP_CREATE_FORBIDDEN",
     );
   });
@@ -173,7 +185,9 @@ describe("CreateTask", () => {
         createTask(actor("PMO"), "project-1", phase.id, {
           title: "Tarefa inválida",
           assigneeId: "outsider-1",
-        }),
+        
+        plannedStartAt: "2026-06-01T15:00:00.000Z",
+        plannedEndAt: "2026-06-30T15:00:00.000Z"}),
       (error: unknown) =>
         error instanceof HttpError && error.code === "TASK_ASSIGNEE_NOT_MEMBER",
     );

@@ -81,18 +81,23 @@ async function setup() {
   const createPhase = makeCreatePhaseUseCase(deps);
   const createTask = makeCreateTaskUseCase(deps);
   const createMilestone = makeCreateMilestoneUseCase(deps);
-  const phase = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Execução" });
-  const otherPhase = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Outra" });
+  const phase = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+  const otherPhase = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Outra" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
   const task = await createTask(actor("PMO", "pmo-1"), "project-1", phase.id, {
     title: "Levantar requisitos",
-  });
+  
+  plannedStartAt: "2026-06-01T15:00:00.000Z",
+  plannedEndAt: "2026-06-30T15:00:00.000Z"});
   const otherTask = await createTask(actor("PMO", "pmo-1"), "project-2", otherPhase.id, {
     title: "Tarefa de outro projeto",
-  });
+  
+  plannedStartAt: "2026-06-01T15:00:00.000Z",
+  plannedEndAt: "2026-06-30T15:00:00.000Z"});
   const milestone = await createMilestone(actor("PMO", "pmo-1"), "project-1", phase.id, {
     title: "Entrega parcial",
     type: "ENTREGA",
-  });
+  
+  plannedAt: "2026-06-15T15:00:00.000Z"});
 
   return {
     store,

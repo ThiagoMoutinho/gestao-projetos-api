@@ -7,6 +7,7 @@ import {
   createInMemoryStore,
   makeInMemoryRepos,
   makeUser,
+  noPlan,
 } from "../test/in-memory";
 import { makeAddProjectMemberUseCase } from "./add-project-member";
 
@@ -28,6 +29,7 @@ function seedStore() {
         glpiTicketId: "12345",
         ownerId: "pmo-1",
         status: "NAO_INICIADO",
+        ...noPlan,
         createdAt: new Date(),
         updatedAt: new Date(),
       },

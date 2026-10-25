@@ -1,5 +1,6 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
+  check,
   index,
   pgEnum,
   pgTable,
@@ -41,13 +42,28 @@ export const projects = pgTable(
       .notNull()
       .references(() => user.id),
     status: projectStatusEnum("status").default("NAO_INICIADO").notNull(),
+    /** Planejamento original, gravado na primeira definição e nunca sobrescrito por reprogramação. */
+    baselineStartAt: timestamp("baseline_start_at"),
+    baselineEndAt: timestamp("baseline_end_at"),
+    plannedStartAt: timestamp("planned_start_at"),
+    plannedEndAt: timestamp("planned_end_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index("projects_owner_id_idx").on(table.ownerId)],
+  (table) => [
+    index("projects_owner_id_idx").on(table.ownerId),
+    check(
+      "projects_planned_dates_chk",
+      sql`${table.plannedEndAt} IS NULL OR ${table.plannedStartAt} IS NULL OR ${table.plannedEndAt} >= ${table.plannedStartAt}`,
+    ),
+    check(
+      "projects_baseline_dates_chk",
+      sql`${table.baselineEndAt} IS NULL OR ${table.baselineStartAt} IS NULL OR ${table.baselineEndAt} >= ${table.baselineStartAt}`,
+    ),
+  ],
 );
 
 export const projectMembers = pgTable(

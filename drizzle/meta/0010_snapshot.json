@@ -1,0 +1,2709 @@
+{
+  "id": "5b2b63a6-8e32-4b3a-8a45-39aa8300ce09",
+  "prevId": "ebd695c5-bb03-47d6-90db-e1e5012e2319",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.posts": {
+      "name": "posts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "posts_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "author_id": {
+          "name": "author_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "posts_author_id_users_id_fk": {
+          "name": "posts_author_id_users_id_fk",
+          "tableFrom": "posts",
+          "tableTo": "users",
+          "columnsFrom": [
+            "author_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "users_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.account": {
+      "name": "account",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_token": {
+          "name": "id_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "access_token_expires_at": {
+          "name": "access_token_expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token_expires_at": {
+          "name": "refresh_token_expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "account_userId_idx": {
+          "name": "account_userId_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "account_user_id_user_id_fk": {
+          "name": "account_user_id_user_id_fk",
+          "tableFrom": "account",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.session": {
+      "name": "session",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "session_userId_idx": {
+          "name": "session_userId_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "session_user_id_user_id_fk": {
+          "name": "session_user_id_user_id_fk",
+          "tableFrom": "session",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "session_token_unique": {
+          "name": "session_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user": {
+      "name": "user",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "role": {
+          "name": "role",
+          "type": "user_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'COLABORADOR'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_email_unique": {
+          "name": "user_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.verification": {
+      "name": "verification",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "verification_identifier_idx": {
+          "name": "verification_identifier_idx",
+          "columns": [
+            {
+              "expression": "identifier",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.eap_audit_logs": {
+      "name": "eap_audit_logs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "eap_audit_action",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "eap_audit_logs_project_id_idx": {
+          "name": "eap_audit_logs_project_id_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_audit_logs_entity_idx": {
+          "name": "eap_audit_logs_entity_idx",
+          "columns": [
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_audit_logs_created_at_idx": {
+          "name": "eap_audit_logs_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "eap_audit_logs_project_id_projects_id_fk": {
+          "name": "eap_audit_logs_project_id_projects_id_fk",
+          "tableFrom": "eap_audit_logs",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_audit_logs_actor_id_user_id_fk": {
+          "name": "eap_audit_logs_actor_id_user_id_fk",
+          "tableFrom": "eap_audit_logs",
+          "tableTo": "user",
+          "columnsFrom": [
+            "actor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.eap_evidences": {
+      "name": "eap_evidences",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "phase_id": {
+          "name": "phase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "milestone_id": {
+          "name": "milestone_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "schedule_request_id": {
+          "name": "schedule_request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "eap_evidences_phase_id_idx": {
+          "name": "eap_evidences_phase_id_idx",
+          "columns": [
+            {
+              "expression": "phase_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_evidences_task_id_idx": {
+          "name": "eap_evidences_task_id_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_evidences_milestone_id_idx": {
+          "name": "eap_evidences_milestone_id_idx",
+          "columns": [
+            {
+              "expression": "milestone_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_evidences_schedule_request_id_idx": {
+          "name": "eap_evidences_schedule_request_id_idx",
+          "columns": [
+            {
+              "expression": "schedule_request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "eap_evidences_phase_id_eap_phases_id_fk": {
+          "name": "eap_evidences_phase_id_eap_phases_id_fk",
+          "tableFrom": "eap_evidences",
+          "tableTo": "eap_phases",
+          "columnsFrom": [
+            "phase_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_evidences_task_id_eap_tasks_id_fk": {
+          "name": "eap_evidences_task_id_eap_tasks_id_fk",
+          "tableFrom": "eap_evidences",
+          "tableTo": "eap_tasks",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_evidences_milestone_id_eap_milestones_id_fk": {
+          "name": "eap_evidences_milestone_id_eap_milestones_id_fk",
+          "tableFrom": "eap_evidences",
+          "tableTo": "eap_milestones",
+          "columnsFrom": [
+            "milestone_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_evidences_schedule_request_id_eap_schedule_requests_id_fk": {
+          "name": "eap_evidences_schedule_request_id_eap_schedule_requests_id_fk",
+          "tableFrom": "eap_evidences",
+          "tableTo": "eap_schedule_requests",
+          "columnsFrom": [
+            "schedule_request_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_evidences_created_by_user_id_fk": {
+          "name": "eap_evidences_created_by_user_id_fk",
+          "tableFrom": "eap_evidences",
+          "tableTo": "user",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "eap_evidences_exactly_one_parent_chk": {
+          "name": "eap_evidences_exactly_one_parent_chk",
+          "value": "(\n        (CASE WHEN \"eap_evidences\".\"phase_id\" IS NULL THEN 0 ELSE 1 END)\n        + (CASE WHEN \"eap_evidences\".\"task_id\" IS NULL THEN 0 ELSE 1 END)\n        + (CASE WHEN \"eap_evidences\".\"milestone_id\" IS NULL THEN 0 ELSE 1 END)\n        + (CASE WHEN \"eap_evidences\".\"schedule_request_id\" IS NULL THEN 0 ELSE 1 END)\n      ) = 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.eap_impediments": {
+      "name": "eap_impediments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opened_by": {
+          "name": "opened_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "opened_at": {
+          "name": "opened_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "resolved_by": {
+          "name": "resolved_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolution_note": {
+          "name": "resolution_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "eap_impediments_task_id_idx": {
+          "name": "eap_impediments_task_id_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_impediments_open_task_idx": {
+          "name": "eap_impediments_open_task_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"eap_impediments\".\"resolved_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "eap_impediments_task_id_eap_tasks_id_fk": {
+          "name": "eap_impediments_task_id_eap_tasks_id_fk",
+          "tableFrom": "eap_impediments",
+          "tableTo": "eap_tasks",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_impediments_opened_by_user_id_fk": {
+          "name": "eap_impediments_opened_by_user_id_fk",
+          "tableFrom": "eap_impediments",
+          "tableTo": "user",
+          "columnsFrom": [
+            "opened_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "eap_impediments_resolved_by_user_id_fk": {
+          "name": "eap_impediments_resolved_by_user_id_fk",
+          "tableFrom": "eap_impediments",
+          "tableTo": "user",
+          "columnsFrom": [
+            "resolved_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "eap_impediments_resolution_chk": {
+          "name": "eap_impediments_resolution_chk",
+          "value": "(\n        (\n          \"eap_impediments\".\"resolved_at\" IS NULL\n          AND \"eap_impediments\".\"resolved_by\" IS NULL\n          AND \"eap_impediments\".\"resolution_note\" IS NULL\n        ) OR (\n          \"eap_impediments\".\"resolved_at\" IS NOT NULL\n          AND \"eap_impediments\".\"resolved_by\" IS NOT NULL\n          AND \"eap_impediments\".\"resolved_at\" >= \"eap_impediments\".\"opened_at\"\n        )\n      )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.eap_milestones": {
+      "name": "eap_milestones",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "phase_id": {
+          "name": "phase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "eap_milestone_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "eap_milestone_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PENDENTE'"
+        },
+        "baseline_at": {
+          "name": "baseline_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planned_at": {
+          "name": "planned_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actual_at": {
+          "name": "actual_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "delivered_by": {
+          "name": "delivered_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "validated_by": {
+          "name": "validated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "validation_note": {
+          "name": "validation_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "eap_milestones_phase_id_idx": {
+          "name": "eap_milestones_phase_id_idx",
+          "columns": [
+            {
+              "expression": "phase_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_milestones_status_planned_at_idx": {
+          "name": "eap_milestones_status_planned_at_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "planned_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_milestones_delivered_by_idx": {
+          "name": "eap_milestones_delivered_by_idx",
+          "columns": [
+            {
+              "expression": "delivered_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "eap_milestones_phase_id_eap_phases_id_fk": {
+          "name": "eap_milestones_phase_id_eap_phases_id_fk",
+          "tableFrom": "eap_milestones",
+          "tableTo": "eap_phases",
+          "columnsFrom": [
+            "phase_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_milestones_delivered_by_user_id_fk": {
+          "name": "eap_milestones_delivered_by_user_id_fk",
+          "tableFrom": "eap_milestones",
+          "tableTo": "user",
+          "columnsFrom": [
+            "delivered_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "eap_milestones_validated_by_user_id_fk": {
+          "name": "eap_milestones_validated_by_user_id_fk",
+          "tableFrom": "eap_milestones",
+          "tableTo": "user",
+          "columnsFrom": [
+            "validated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "eap_milestones_created_by_user_id_fk": {
+          "name": "eap_milestones_created_by_user_id_fk",
+          "tableFrom": "eap_milestones",
+          "tableTo": "user",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "eap_milestones_updated_by_user_id_fk": {
+          "name": "eap_milestones_updated_by_user_id_fk",
+          "tableFrom": "eap_milestones",
+          "tableTo": "user",
+          "columnsFrom": [
+            "updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "eap_milestones_phase_sort_order_unique": {
+          "name": "eap_milestones_phase_sort_order_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "phase_id",
+            "sort_order"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "eap_milestones_sort_order_chk": {
+          "name": "eap_milestones_sort_order_chk",
+          "value": "\"eap_milestones\".\"sort_order\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.eap_phases": {
+      "name": "eap_phases",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "eap_phase_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'NAO_INICIADA'"
+        },
+        "baseline_start_at": {
+          "name": "baseline_start_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "baseline_end_at": {
+          "name": "baseline_end_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planned_start_at": {
+          "name": "planned_start_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planned_end_at": {
+          "name": "planned_end_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actual_start_at": {
+          "name": "actual_start_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actual_end_at": {
+          "name": "actual_end_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "responsible_id": {
+          "name": "responsible_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completion_criteria": {
+          "name": "completion_criteria",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "eap_phases_project_id_idx": {
+          "name": "eap_phases_project_id_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_phases_responsible_id_idx": {
+          "name": "eap_phases_responsible_id_idx",
+          "columns": [
+            {
+              "expression": "responsible_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "eap_phases_project_id_projects_id_fk": {
+          "name": "eap_phases_project_id_projects_id_fk",
+          "tableFrom": "eap_phases",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_phases_responsible_id_user_id_fk": {
+          "name": "eap_phases_responsible_id_user_id_fk",
+          "tableFrom": "eap_phases",
+          "tableTo": "user",
+          "columnsFrom": [
+            "responsible_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "eap_phases_created_by_user_id_fk": {
+          "name": "eap_phases_created_by_user_id_fk",
+          "tableFrom": "eap_phases",
+          "tableTo": "user",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "eap_phases_updated_by_user_id_fk": {
+          "name": "eap_phases_updated_by_user_id_fk",
+          "tableFrom": "eap_phases",
+          "tableTo": "user",
+          "columnsFrom": [
+            "updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "eap_phases_project_sort_order_unique": {
+          "name": "eap_phases_project_sort_order_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "project_id",
+            "sort_order"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "eap_phases_sort_order_chk": {
+          "name": "eap_phases_sort_order_chk",
+          "value": "\"eap_phases\".\"sort_order\" >= 0"
+        },
+        "eap_phases_planned_dates_chk": {
+          "name": "eap_phases_planned_dates_chk",
+          "value": "\"eap_phases\".\"planned_end_at\" IS NULL OR \"eap_phases\".\"planned_start_at\" IS NULL OR \"eap_phases\".\"planned_end_at\" >= \"eap_phases\".\"planned_start_at\""
+        },
+        "eap_phases_baseline_dates_chk": {
+          "name": "eap_phases_baseline_dates_chk",
+          "value": "\"eap_phases\".\"baseline_end_at\" IS NULL OR \"eap_phases\".\"baseline_start_at\" IS NULL OR \"eap_phases\".\"baseline_end_at\" >= \"eap_phases\".\"baseline_start_at\""
+        },
+        "eap_phases_actual_dates_chk": {
+          "name": "eap_phases_actual_dates_chk",
+          "value": "\"eap_phases\".\"actual_end_at\" IS NULL OR (\"eap_phases\".\"actual_start_at\" IS NOT NULL AND \"eap_phases\".\"actual_end_at\" >= \"eap_phases\".\"actual_start_at\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.eap_schedule_changes": {
+      "name": "eap_schedule_changes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phase_id": {
+          "name": "phase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "milestone_id": {
+          "name": "milestone_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "field": {
+          "name": "field",
+          "type": "eap_schedule_field",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "baseline_value": {
+          "name": "baseline_value",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "old_value": {
+          "name": "old_value",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "new_value": {
+          "name": "new_value",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "changed_by": {
+          "name": "changed_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "eap_schedule_changes_project_id_idx": {
+          "name": "eap_schedule_changes_project_id_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_schedule_changes_request_id_idx": {
+          "name": "eap_schedule_changes_request_id_idx",
+          "columns": [
+            {
+              "expression": "request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_schedule_changes_phase_id_idx": {
+          "name": "eap_schedule_changes_phase_id_idx",
+          "columns": [
+            {
+              "expression": "phase_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_schedule_changes_task_id_idx": {
+          "name": "eap_schedule_changes_task_id_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_schedule_changes_milestone_id_idx": {
+          "name": "eap_schedule_changes_milestone_id_idx",
+          "columns": [
+            {
+              "expression": "milestone_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "eap_schedule_changes_project_id_projects_id_fk": {
+          "name": "eap_schedule_changes_project_id_projects_id_fk",
+          "tableFrom": "eap_schedule_changes",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_schedule_changes_request_id_eap_schedule_requests_id_fk": {
+          "name": "eap_schedule_changes_request_id_eap_schedule_requests_id_fk",
+          "tableFrom": "eap_schedule_changes",
+          "tableTo": "eap_schedule_requests",
+          "columnsFrom": [
+            "request_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_schedule_changes_phase_id_eap_phases_id_fk": {
+          "name": "eap_schedule_changes_phase_id_eap_phases_id_fk",
+          "tableFrom": "eap_schedule_changes",
+          "tableTo": "eap_phases",
+          "columnsFrom": [
+            "phase_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_schedule_changes_task_id_eap_tasks_id_fk": {
+          "name": "eap_schedule_changes_task_id_eap_tasks_id_fk",
+          "tableFrom": "eap_schedule_changes",
+          "tableTo": "eap_tasks",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_schedule_changes_milestone_id_eap_milestones_id_fk": {
+          "name": "eap_schedule_changes_milestone_id_eap_milestones_id_fk",
+          "tableFrom": "eap_schedule_changes",
+          "tableTo": "eap_milestones",
+          "columnsFrom": [
+            "milestone_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_schedule_changes_changed_by_user_id_fk": {
+          "name": "eap_schedule_changes_changed_by_user_id_fk",
+          "tableFrom": "eap_schedule_changes",
+          "tableTo": "user",
+          "columnsFrom": [
+            "changed_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "eap_schedule_changes_target_chk": {
+          "name": "eap_schedule_changes_target_chk",
+          "value": "(\n      (\n        \"eap_schedule_changes\".\"phase_id\" IS NOT NULL\n        AND \"eap_schedule_changes\".\"task_id\" IS NULL\n        AND \"eap_schedule_changes\".\"milestone_id\" IS NULL\n        AND \"eap_schedule_changes\".\"field\" IN ('PLANNED_START_AT', 'PLANNED_END_AT')\n      ) OR (\n        \"eap_schedule_changes\".\"phase_id\" IS NULL\n        AND \"eap_schedule_changes\".\"task_id\" IS NOT NULL\n        AND \"eap_schedule_changes\".\"milestone_id\" IS NULL\n        AND \"eap_schedule_changes\".\"field\" IN ('PLANNED_START_AT', 'PLANNED_END_AT')\n      ) OR (\n        \"eap_schedule_changes\".\"phase_id\" IS NULL\n        AND \"eap_schedule_changes\".\"task_id\" IS NULL\n        AND \"eap_schedule_changes\".\"milestone_id\" IS NOT NULL\n        AND \"eap_schedule_changes\".\"field\" = 'PLANNED_AT'\n      )\n    )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.eap_schedule_requests": {
+      "name": "eap_schedule_requests",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phase_id": {
+          "name": "phase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "milestone_id": {
+          "name": "milestone_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "field": {
+          "name": "field",
+          "type": "eap_schedule_field",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "baseline_value": {
+          "name": "baseline_value",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expected_current_value": {
+          "name": "expected_current_value",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposed_value": {
+          "name": "proposed_value",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "justification": {
+          "name": "justification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "eap_schedule_request_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PENDENTE'"
+        },
+        "requested_by": {
+          "name": "requested_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "reviewed_by": {
+          "name": "reviewed_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decision_note": {
+          "name": "decision_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "eap_schedule_requests_project_status_idx": {
+          "name": "eap_schedule_requests_project_status_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_schedule_requests_phase_id_idx": {
+          "name": "eap_schedule_requests_phase_id_idx",
+          "columns": [
+            {
+              "expression": "phase_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_schedule_requests_task_id_idx": {
+          "name": "eap_schedule_requests_task_id_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_schedule_requests_milestone_id_idx": {
+          "name": "eap_schedule_requests_milestone_id_idx",
+          "columns": [
+            {
+              "expression": "milestone_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_schedule_requests_pending_phase_field_idx": {
+          "name": "eap_schedule_requests_pending_phase_field_idx",
+          "columns": [
+            {
+              "expression": "phase_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "field",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"eap_schedule_requests\".\"status\" = 'PENDENTE' AND \"eap_schedule_requests\".\"phase_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_schedule_requests_pending_task_field_idx": {
+          "name": "eap_schedule_requests_pending_task_field_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "field",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"eap_schedule_requests\".\"status\" = 'PENDENTE' AND \"eap_schedule_requests\".\"task_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_schedule_requests_pending_milestone_field_idx": {
+          "name": "eap_schedule_requests_pending_milestone_field_idx",
+          "columns": [
+            {
+              "expression": "milestone_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "field",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"eap_schedule_requests\".\"status\" = 'PENDENTE' AND \"eap_schedule_requests\".\"milestone_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "eap_schedule_requests_project_id_projects_id_fk": {
+          "name": "eap_schedule_requests_project_id_projects_id_fk",
+          "tableFrom": "eap_schedule_requests",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_schedule_requests_phase_id_eap_phases_id_fk": {
+          "name": "eap_schedule_requests_phase_id_eap_phases_id_fk",
+          "tableFrom": "eap_schedule_requests",
+          "tableTo": "eap_phases",
+          "columnsFrom": [
+            "phase_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_schedule_requests_task_id_eap_tasks_id_fk": {
+          "name": "eap_schedule_requests_task_id_eap_tasks_id_fk",
+          "tableFrom": "eap_schedule_requests",
+          "tableTo": "eap_tasks",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_schedule_requests_milestone_id_eap_milestones_id_fk": {
+          "name": "eap_schedule_requests_milestone_id_eap_milestones_id_fk",
+          "tableFrom": "eap_schedule_requests",
+          "tableTo": "eap_milestones",
+          "columnsFrom": [
+            "milestone_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_schedule_requests_requested_by_user_id_fk": {
+          "name": "eap_schedule_requests_requested_by_user_id_fk",
+          "tableFrom": "eap_schedule_requests",
+          "tableTo": "user",
+          "columnsFrom": [
+            "requested_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "eap_schedule_requests_reviewed_by_user_id_fk": {
+          "name": "eap_schedule_requests_reviewed_by_user_id_fk",
+          "tableFrom": "eap_schedule_requests",
+          "tableTo": "user",
+          "columnsFrom": [
+            "reviewed_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "eap_schedule_requests_justification_chk": {
+          "name": "eap_schedule_requests_justification_chk",
+          "value": "char_length(btrim(\"eap_schedule_requests\".\"justification\")) >= 10"
+        },
+        "eap_schedule_requests_target_chk": {
+          "name": "eap_schedule_requests_target_chk",
+          "value": "(\n      (\n        \"eap_schedule_requests\".\"phase_id\" IS NOT NULL\n        AND \"eap_schedule_requests\".\"task_id\" IS NULL\n        AND \"eap_schedule_requests\".\"milestone_id\" IS NULL\n        AND \"eap_schedule_requests\".\"field\" IN ('PLANNED_START_AT', 'PLANNED_END_AT')\n      ) OR (\n        \"eap_schedule_requests\".\"phase_id\" IS NULL\n        AND \"eap_schedule_requests\".\"task_id\" IS NOT NULL\n        AND \"eap_schedule_requests\".\"milestone_id\" IS NULL\n        AND \"eap_schedule_requests\".\"field\" IN ('PLANNED_START_AT', 'PLANNED_END_AT')\n      ) OR (\n        \"eap_schedule_requests\".\"phase_id\" IS NULL\n        AND \"eap_schedule_requests\".\"task_id\" IS NULL\n        AND \"eap_schedule_requests\".\"milestone_id\" IS NOT NULL\n        AND \"eap_schedule_requests\".\"field\" = 'PLANNED_AT'\n      )\n    )"
+        },
+        "eap_schedule_requests_status_review_chk": {
+          "name": "eap_schedule_requests_status_review_chk",
+          "value": "(\n        (\n          \"eap_schedule_requests\".\"status\" = 'PENDENTE'\n          AND \"eap_schedule_requests\".\"reviewed_by\" IS NULL\n          AND \"eap_schedule_requests\".\"reviewed_at\" IS NULL\n          AND \"eap_schedule_requests\".\"decision_note\" IS NULL\n        ) OR (\n          \"eap_schedule_requests\".\"status\" = 'APROVADA'\n          AND \"eap_schedule_requests\".\"reviewed_by\" IS NOT NULL\n          AND \"eap_schedule_requests\".\"reviewed_at\" IS NOT NULL\n        ) OR (\n          \"eap_schedule_requests\".\"status\" = 'REJEITADA'\n          AND \"eap_schedule_requests\".\"reviewed_by\" IS NOT NULL\n          AND \"eap_schedule_requests\".\"reviewed_at\" IS NOT NULL\n          AND \"eap_schedule_requests\".\"decision_note\" IS NOT NULL\n          AND char_length(btrim(\"eap_schedule_requests\".\"decision_note\")) >= 10\n        ) OR (\n          \"eap_schedule_requests\".\"status\" = 'CANCELADA'\n          AND \"eap_schedule_requests\".\"reviewed_by\" IS NULL\n          AND \"eap_schedule_requests\".\"reviewed_at\" IS NOT NULL\n        ) OR (\n          \"eap_schedule_requests\".\"status\" = 'CANCELADA_CONFLITO'\n          AND \"eap_schedule_requests\".\"reviewed_by\" IS NULL\n          AND \"eap_schedule_requests\".\"reviewed_at\" IS NOT NULL\n          AND \"eap_schedule_requests\".\"decision_note\" IS NOT NULL\n          AND char_length(btrim(\"eap_schedule_requests\".\"decision_note\")) >= 10\n        )\n      )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.eap_tasks": {
+      "name": "eap_tasks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "phase_id": {
+          "name": "phase_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assignee_id": {
+          "name": "assignee_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "eap_task_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'NAO_INICIADA'"
+        },
+        "progress_percent": {
+          "name": "progress_percent",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "weight": {
+          "name": "weight",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "baseline_start_at": {
+          "name": "baseline_start_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "baseline_end_at": {
+          "name": "baseline_end_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planned_start_at": {
+          "name": "planned_start_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planned_end_at": {
+          "name": "planned_end_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actual_start_at": {
+          "name": "actual_start_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actual_end_at": {
+          "name": "actual_end_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_impediment": {
+          "name": "has_impediment",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "eap_tasks_phase_id_idx": {
+          "name": "eap_tasks_phase_id_idx",
+          "columns": [
+            {
+              "expression": "phase_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_tasks_assignee_id_idx": {
+          "name": "eap_tasks_assignee_id_idx",
+          "columns": [
+            {
+              "expression": "assignee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eap_tasks_status_planned_end_idx": {
+          "name": "eap_tasks_status_planned_end_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "planned_end_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "eap_tasks_phase_id_eap_phases_id_fk": {
+          "name": "eap_tasks_phase_id_eap_phases_id_fk",
+          "tableFrom": "eap_tasks",
+          "tableTo": "eap_phases",
+          "columnsFrom": [
+            "phase_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eap_tasks_assignee_id_user_id_fk": {
+          "name": "eap_tasks_assignee_id_user_id_fk",
+          "tableFrom": "eap_tasks",
+          "tableTo": "user",
+          "columnsFrom": [
+            "assignee_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "eap_tasks_created_by_user_id_fk": {
+          "name": "eap_tasks_created_by_user_id_fk",
+          "tableFrom": "eap_tasks",
+          "tableTo": "user",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "eap_tasks_updated_by_user_id_fk": {
+          "name": "eap_tasks_updated_by_user_id_fk",
+          "tableFrom": "eap_tasks",
+          "tableTo": "user",
+          "columnsFrom": [
+            "updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "eap_tasks_phase_sort_order_unique": {
+          "name": "eap_tasks_phase_sort_order_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "phase_id",
+            "sort_order"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "eap_tasks_sort_order_chk": {
+          "name": "eap_tasks_sort_order_chk",
+          "value": "\"eap_tasks\".\"sort_order\" >= 0"
+        },
+        "eap_tasks_progress_percent_chk": {
+          "name": "eap_tasks_progress_percent_chk",
+          "value": "\"eap_tasks\".\"progress_percent\" >= 0 AND \"eap_tasks\".\"progress_percent\" <= 100"
+        },
+        "eap_tasks_concluded_progress_chk": {
+          "name": "eap_tasks_concluded_progress_chk",
+          "value": "\"eap_tasks\".\"status\" <> 'CONCLUIDA' OR \"eap_tasks\".\"progress_percent\" = 100"
+        },
+        "eap_tasks_weight_chk": {
+          "name": "eap_tasks_weight_chk",
+          "value": "\"eap_tasks\".\"weight\" >= 1"
+        },
+        "eap_tasks_planned_dates_chk": {
+          "name": "eap_tasks_planned_dates_chk",
+          "value": "\"eap_tasks\".\"planned_end_at\" IS NULL OR \"eap_tasks\".\"planned_start_at\" IS NULL OR \"eap_tasks\".\"planned_end_at\" >= \"eap_tasks\".\"planned_start_at\""
+        },
+        "eap_tasks_baseline_dates_chk": {
+          "name": "eap_tasks_baseline_dates_chk",
+          "value": "\"eap_tasks\".\"baseline_end_at\" IS NULL OR \"eap_tasks\".\"baseline_start_at\" IS NULL OR \"eap_tasks\".\"baseline_end_at\" >= \"eap_tasks\".\"baseline_start_at\""
+        },
+        "eap_tasks_actual_dates_chk": {
+          "name": "eap_tasks_actual_dates_chk",
+          "value": "\"eap_tasks\".\"actual_end_at\" IS NULL OR (\"eap_tasks\".\"actual_start_at\" IS NOT NULL AND \"eap_tasks\".\"actual_end_at\" >= \"eap_tasks\".\"actual_start_at\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.project_members": {
+      "name": "project_members",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "project_member_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "project_members_project_id_idx": {
+          "name": "project_members_project_id_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "project_members_user_id_idx": {
+          "name": "project_members_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "project_members_project_id_projects_id_fk": {
+          "name": "project_members_project_id_projects_id_fk",
+          "tableFrom": "project_members",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "project_members_user_id_user_id_fk": {
+          "name": "project_members_user_id_user_id_fk",
+          "tableFrom": "project_members",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "project_members_project_user_role_unique": {
+          "name": "project_members_project_user_role_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "project_id",
+            "user_id",
+            "role"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.projects": {
+      "name": "projects",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "glpi_ticket_id": {
+          "name": "glpi_ticket_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "project_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'NAO_INICIADO'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "projects_owner_id_idx": {
+          "name": "projects_owner_id_idx",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "projects_owner_id_user_id_fk": {
+          "name": "projects_owner_id_user_id_fk",
+          "tableFrom": "projects",
+          "tableTo": "user",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.user_role": {
+      "name": "user_role",
+      "schema": "public",
+      "values": [
+        "ADMIN",
+        "PMO",
+        "COORDENADOR",
+        "GESTOR",
+        "FORNECEDOR",
+        "COLABORADOR"
+      ]
+    },
+    "public.eap_audit_action": {
+      "name": "eap_audit_action",
+      "schema": "public",
+      "values": [
+        "CREATE",
+        "UPDATE",
+        "STATUS_CHANGE",
+        "SCHEDULE_REQUEST",
+        "SCHEDULE_APPROVE",
+        "SCHEDULE_REJECT",
+        "SCHEDULE_CANCEL",
+        "SCHEDULE_STALE",
+        "SCHEDULE_CHANGE",
+        "VALIDATE",
+        "IMPEDE",
+        "CLEAR_IMPEDIMENT",
+        "DELETE"
+      ]
+    },
+    "public.eap_milestone_status": {
+      "name": "eap_milestone_status",
+      "schema": "public",
+      "values": [
+        "PENDENTE",
+        "ENTREGUE",
+        "APROVADO",
+        "REJEITADO"
+      ]
+    },
+    "public.eap_milestone_type": {
+      "name": "eap_milestone_type",
+      "schema": "public",
+      "values": [
+        "ENTREGA",
+        "APROVACAO"
+      ]
+    },
+    "public.eap_phase_status": {
+      "name": "eap_phase_status",
+      "schema": "public",
+      "values": [
+        "NAO_INICIADA",
+        "EM_ANDAMENTO",
+        "CONCLUIDA",
+        "SUSPENSA"
+      ]
+    },
+    "public.eap_schedule_field": {
+      "name": "eap_schedule_field",
+      "schema": "public",
+      "values": [
+        "PLANNED_START_AT",
+        "PLANNED_END_AT",
+        "PLANNED_AT"
+      ]
+    },
+    "public.eap_schedule_request_status": {
+      "name": "eap_schedule_request_status",
+      "schema": "public",
+      "values": [
+        "PENDENTE",
+        "APROVADA",
+        "REJEITADA",
+        "CANCELADA",
+        "CANCELADA_CONFLITO"
+      ]
+    },
+    "public.eap_task_status": {
+      "name": "eap_task_status",
+      "schema": "public",
+      "values": [
+        "NAO_INICIADA",
+        "EM_ANDAMENTO",
+        "IMPEDIDA",
+        "CONCLUIDA",
+        "CANCELADA"
+      ]
+    },
+    "public.project_member_role": {
+      "name": "project_member_role",
+      "schema": "public",
+      "values": [
+        "DONO_PROJETO",
+        "GESTOR",
+        "PO",
+        "DESENVOLVEDOR",
+        "RESPONSAVEL_TECNICO",
+        "FORNECEDOR",
+        "OBSERVADOR"
+      ]
+    },
+    "public.project_status": {
+      "name": "project_status",
+      "schema": "public",
+      "values": [
+        "NAO_INICIADO",
+        "EM_EXECUCAO",
+        "EM_ATENCAO",
+        "CRITICO",
+        "EM_VALIDACAO",
+        "CONCLUIDO",
+        "SUSPENSO"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

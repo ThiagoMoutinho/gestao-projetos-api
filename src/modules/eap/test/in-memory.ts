@@ -7,17 +7,26 @@ import type {
 import {
   makeInMemoryRepos,
   makeUser,
+  noPlan,
   type InMemoryStore as ProjectStore,
 } from "../../projects/test/in-memory";
 import type { EapEvidenceRow } from "../dtos/eap-evidences.dto";
+import type { EapImpedimentRow } from "../dtos/eap-impediments.dto";
+import type { EapMilestoneDeliveryRow } from "../dtos/eap-milestone-deliveries.dto";
 import type { EapAuditLogRow, EapPhaseRow } from "../dtos/eap-phases.dto";
 import type { EapMilestoneRow } from "../dtos/eap-milestones.dto";
 import type { EapTaskRow } from "../dtos/eap-tasks.dto";
 import type {
+  EapAuditActionFilter,
   EapAuditEntityFilter,
   EapAuditRepository,
   EapEvidencesRepository,
   EapEvidenceUpdateRecord,
+  EapImpedimentsRepository,
+  EapImpedimentUpdateRecord,
+  EapMilestoneDeliveriesRepository,
+  EapMilestoneDeliveryDecisionRecord,
+  EapMilestoneDeliveryResubmissionRecord,
   EapMilestonesRepository,
   EapMilestoneUpdateRecord,
   EapPhasesRepository,
@@ -29,18 +38,29 @@ import type {
   EvidenceParentFilter,
   NewEapAuditLogRecord,
   NewEapEvidenceRecord,
+  NewEapImpedimentRecord,
+  NewEapMilestoneDeliveryRecord,
   NewEapMilestoneRecord,
   NewEapPhaseRecord,
   NewEapTaskRecord,
+  ScheduleRequestTarget,
 } from "../repositories/contracts";
 
-export type EapScheduleRequestRef = { id: string; projectId: string };
+export type EapScheduleRequestRef = {
+  id: string;
+  projectId: string;
+  phaseId?: string | null;
+  taskId?: string | null;
+  milestoneId?: string | null;
+};
 
 export type EapInMemoryStore = ProjectStore & {
   phases: EapPhaseRow[];
   tasks: EapTaskRow[];
   milestones: EapMilestoneRow[];
+  deliveries: EapMilestoneDeliveryRow[];
   scheduleRequests: EapScheduleRequestRef[];
+  impediments: EapImpedimentRow[];
   evidences: EapEvidenceRow[];
   auditLogs: EapAuditLogRow[];
 };
@@ -55,7 +75,9 @@ export function createEapInMemoryStore(
     phases: seed?.phases ?? [],
     tasks: seed?.tasks ?? [],
     milestones: seed?.milestones ?? [],
+    deliveries: seed?.deliveries ?? [],
     scheduleRequests: seed?.scheduleRequests ?? [],
+    impediments: seed?.impediments ?? [],
     evidences: seed?.evidences ?? [],
     auditLogs: seed?.auditLogs ?? [],
   };
@@ -79,6 +101,10 @@ class InMemoryEapPhasesRepository implements EapPhasesRepository {
       this.store.phases.find((row) => row.id === phaseId && row.projectId === projectId) ??
       null
     );
+  }
+
+  async lockForUpdate(phaseId: string, projectId: string) {
+    return this.findByIdAndProject(phaseId, projectId);
   }
 
   async findMaxSortOrder(projectId: string) {
@@ -167,6 +193,17 @@ class InMemoryEapPhasesRepository implements EapPhasesRepository {
 
     return this.listByProject(projectId);
   }
+
+  async delete(phaseId: string, projectId: string) {
+    const index = this.store.phases.findIndex(
+      (row) => row.id === phaseId && row.projectId === projectId,
+    );
+    if (index < 0) {
+      return false;
+    }
+    this.store.phases.splice(index, 1);
+    return true;
+  }
 }
 
 class InMemoryEapTasksRepository implements EapTasksRepository {
@@ -179,6 +216,13 @@ class InMemoryEapTasksRepository implements EapTasksRepository {
         (a, b) =>
           a.sortOrder - b.sortOrder || a.createdAt.getTime() - b.createdAt.getTime(),
       );
+  }
+
+  async listByProject(projectId: string) {
+    const phaseIds = new Set(
+      this.store.phases.filter((row) => row.projectId === projectId).map((row) => row.id),
+    );
+    return this.store.tasks.filter((row) => phaseIds.has(row.phaseId));
   }
 
   async findById(taskId: string) {
@@ -259,6 +303,21 @@ class InMemoryEapTasksRepository implements EapTasksRepository {
     this.store.tasks[index] = updated;
     return updated;
   }
+
+  async countImpediments(taskId: string) {
+    return this.store.impediments.filter((row) => row.taskId === taskId).length;
+  }
+
+  async delete(taskId: string, phaseId: string) {
+    const index = this.store.tasks.findIndex(
+      (row) => row.id === taskId && row.phaseId === phaseId,
+    );
+    if (index < 0) {
+      return false;
+    }
+    this.store.tasks.splice(index, 1);
+    return true;
+  }
 }
 
 class InMemoryEapMilestonesRepository implements EapMilestonesRepository {
@@ -271,6 +330,13 @@ class InMemoryEapMilestonesRepository implements EapMilestonesRepository {
         (a, b) =>
           a.sortOrder - b.sortOrder || a.createdAt.getTime() - b.createdAt.getTime(),
       );
+  }
+
+  async listByProject(projectId: string) {
+    const phaseIds = new Set(
+      this.store.phases.filter((row) => row.projectId === projectId).map((row) => row.id),
+    );
+    return this.store.milestones.filter((row) => phaseIds.has(row.phaseId));
   }
 
   async findById(milestoneId: string) {
@@ -330,6 +396,7 @@ class InMemoryEapMilestonesRepository implements EapMilestonesRepository {
       deliveredBy: null,
       validatedBy: null,
       validationNote: null,
+      validatedAt: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -353,6 +420,103 @@ class InMemoryEapMilestonesRepository implements EapMilestonesRepository {
     this.store.milestones[index] = updated;
     return updated;
   }
+
+  async delete(milestoneId: string, phaseId: string) {
+    const index = this.store.milestones.findIndex(
+      (row) => row.id === milestoneId && row.phaseId === phaseId,
+    );
+    if (index < 0) {
+      return false;
+    }
+    this.store.milestones.splice(index, 1);
+    return true;
+  }
+}
+
+class InMemoryEapMilestoneDeliveriesRepository implements EapMilestoneDeliveriesRepository {
+  constructor(private readonly store: EapInMemoryStore) {}
+
+  async listByMilestone(milestoneId: string) {
+    const nameOf = (userId: string | null) => this.store.users.find((user) => user.id === userId)?.name ?? null;
+    return this.store.deliveries
+      .filter((row) => row.milestoneId === milestoneId)
+      .sort((a, b) => a.round - b.round)
+      .map((row) => ({
+        ...row,
+        submittedByName: nameOf(row.submittedBy),
+        decidedByName: nameOf(row.decidedBy),
+        resubmissionAuthorizedByName: nameOf(row.resubmissionAuthorizedBy),
+      }));
+  }
+
+  async listByProject(projectId: string) {
+    const phaseIds = new Set(
+      this.store.phases.filter((row) => row.projectId === projectId).map((row) => row.id),
+    );
+    const milestoneIds = new Set(
+      this.store.milestones.filter((row) => phaseIds.has(row.phaseId)).map((row) => row.id),
+    );
+    return this.store.deliveries
+      .filter((row) => milestoneIds.has(row.milestoneId))
+      .sort((a, b) => a.milestoneId.localeCompare(b.milestoneId) || a.round - b.round);
+  }
+
+  async findLatest(milestoneId: string) {
+    return (
+      this.store.deliveries
+        .filter((row) => row.milestoneId === milestoneId)
+        .sort((a, b) => b.round - a.round)[0] ?? null
+    );
+  }
+
+  async create(data: NewEapMilestoneDeliveryRecord) {
+    const duplicated = this.store.deliveries.some(
+      (row) =>
+        row.milestoneId === data.milestoneId &&
+        (row.round === data.round || row.status === "EM_ANALISE"),
+    );
+    if (duplicated) {
+      throw new UniqueConstraintError();
+    }
+    const row: EapMilestoneDeliveryRow = {
+      ...data,
+      status: "EM_ANALISE",
+      decidedBy: null,
+      decidedAt: null,
+      decisionNote: null,
+      nonconformities: null,
+      adjustments: null,
+      resubmissionAuthorizedBy: null,
+      resubmissionAuthorizedAt: null,
+      resubmissionNote: null,
+    };
+    this.store.deliveries.push(row);
+    return row;
+  }
+
+  async decide(deliveryId: string, data: EapMilestoneDeliveryDecisionRecord) {
+    const index = this.store.deliveries.findIndex(
+      (row) => row.id === deliveryId && row.status === "EM_ANALISE",
+    );
+    if (index < 0) {
+      return null;
+    }
+    const updated: EapMilestoneDeliveryRow = { ...this.store.deliveries[index], ...data };
+    this.store.deliveries[index] = updated;
+    return updated;
+  }
+
+  async authorizeResubmission(deliveryId: string, data: EapMilestoneDeliveryResubmissionRecord) {
+    const index = this.store.deliveries.findIndex(
+      (row) => row.id === deliveryId && row.status === "REJEITADA" && !row.resubmissionAuthorizedAt,
+    );
+    if (index < 0) {
+      return null;
+    }
+    const updated: EapMilestoneDeliveryRow = { ...this.store.deliveries[index], ...data };
+    this.store.deliveries[index] = updated;
+    return updated;
+  }
 }
 
 class InMemoryEapScheduleRequestsRepository implements EapScheduleRequestsRepository {
@@ -360,6 +524,16 @@ class InMemoryEapScheduleRequestsRepository implements EapScheduleRequestsReposi
 
   async findById(id: string) {
     return this.store.scheduleRequests.find((row) => row.id === id) ?? null;
+  }
+
+  async countByTarget(target: ScheduleRequestTarget) {
+    return this.store.scheduleRequests.filter((row) =>
+      "phaseId" in target
+        ? row.phaseId === target.phaseId
+        : "taskId" in target
+          ? row.taskId === target.taskId
+          : row.milestoneId === target.milestoneId,
+    ).length;
   }
 }
 
@@ -430,6 +604,7 @@ class InMemoryEapEvidencesRepository implements EapEvidencesRepository {
   async create(data: NewEapEvidenceRecord) {
     const row: EapEvidenceRow = {
       ...data,
+      deliveryId: data.deliveryId ?? null,
       createdAt: new Date(),
     };
     this.store.evidences.push(row);
@@ -437,7 +612,7 @@ class InMemoryEapEvidencesRepository implements EapEvidencesRepository {
   }
 
   async update(evidenceId: string, data: EapEvidenceUpdateRecord) {
-    const index = this.store.evidences.findIndex((row) => row.id === evidenceId);
+    const index = this.store.evidences.findIndex((row) => row.id === evidenceId && !row.deliveryId);
     if (index < 0) {
       return null;
     }
@@ -446,6 +621,62 @@ class InMemoryEapEvidencesRepository implements EapEvidencesRepository {
       ...data,
     };
     this.store.evidences[index] = updated;
+    return updated;
+  }
+
+  async linkToDelivery(milestoneId: string, deliveryId: string, createdUntil?: Date) {
+    const linked: string[] = [];
+    this.store.evidences.forEach((row, index) => {
+      if (
+        row.milestoneId === milestoneId &&
+        !row.deliveryId &&
+        (!createdUntil || row.createdAt <= createdUntil)
+      ) {
+        this.store.evidences[index] = { ...row, deliveryId };
+        linked.push(row.id);
+      }
+    });
+    return linked;
+  }
+}
+
+class InMemoryEapImpedimentsRepository implements EapImpedimentsRepository {
+  constructor(private readonly store: EapInMemoryStore) {}
+
+  async listByTask(taskId: string) {
+    const nameOf = (userId: string | null) => this.store.users.find((user) => user.id === userId)?.name ?? null;
+    return this.store.impediments
+      .filter((row) => row.taskId === taskId)
+      .sort((a, b) => b.openedAt.getTime() - a.openedAt.getTime())
+      .map((row) => ({ ...row, openedByName: nameOf(row.openedBy), resolvedByName: nameOf(row.resolvedBy) }));
+  }
+
+  async findOpenByTask(taskId: string) {
+    return this.store.impediments.find((row) => row.taskId === taskId && !row.resolvedAt) ?? null;
+  }
+
+  async create(data: NewEapImpedimentRecord) {
+    if (await this.findOpenByTask(data.taskId)) {
+      throw new UniqueConstraintError();
+    }
+    const row: EapImpedimentRow = {
+      ...data,
+      openedAt: new Date(),
+      resolvedBy: null,
+      resolvedAt: null,
+      resolutionNote: null,
+    };
+    this.store.impediments.push(row);
+    return row;
+  }
+
+  async update(impedimentId: string, data: EapImpedimentUpdateRecord) {
+    const index = this.store.impediments.findIndex((row) => row.id === impedimentId);
+    if (index < 0) {
+      return null;
+    }
+    const updated: EapImpedimentRow = { ...this.store.impediments[index], ...data };
+    this.store.impediments[index] = updated;
     return updated;
   }
 }
@@ -506,6 +737,21 @@ class InMemoryEapAuditRepository implements EapAuditRepository {
         actorName: this.store.users.find((user) => user.id === row.actorId)?.name ?? null,
       }));
   }
+
+  async listByAction(filter: EapAuditActionFilter) {
+    return this.store.auditLogs
+      .filter(
+        (row) =>
+          row.projectId === filter.projectId &&
+          row.action === filter.action &&
+          (!filter.entityType || row.entityType === filter.entityType) &&
+          (!filter.entityId || row.entityId === filter.entityId),
+      )
+      .map((row) => ({
+        ...row,
+        actorName: this.store.users.find((user) => user.id === row.actorId)?.name ?? null,
+      }));
+  }
 }
 
 export function makeEapInMemoryRepos(store: EapInMemoryStore): EapRepos {
@@ -518,7 +764,9 @@ export function makeEapInMemoryRepos(store: EapInMemoryStore): EapRepos {
     phases: new InMemoryEapPhasesRepository(store),
     tasks: new InMemoryEapTasksRepository(store),
     milestones: new InMemoryEapMilestonesRepository(store),
+    deliveries: new InMemoryEapMilestoneDeliveriesRepository(store),
     scheduleRequests: new InMemoryEapScheduleRequestsRepository(store),
+    impediments: new InMemoryEapImpedimentsRepository(store),
     evidences: new InMemoryEapEvidencesRepository(store),
     audit: new InMemoryEapAuditRepository(store),
   };
@@ -532,7 +780,9 @@ function cloneStore(store: EapInMemoryStore): EapInMemoryStore {
     phases: store.phases.map((row) => ({ ...row })),
     tasks: store.tasks.map((row) => ({ ...row })),
     milestones: store.milestones.map((row) => ({ ...row })),
+    deliveries: store.deliveries.map((row) => ({ ...row })),
     scheduleRequests: store.scheduleRequests.map((row) => ({ ...row })),
+    impediments: store.impediments.map((row) => ({ ...row })),
     evidences: store.evidences.map((row) => ({ ...row })),
     auditLogs: store.auditLogs.map((row) => ({ ...row })),
   };
@@ -545,7 +795,9 @@ function restoreStore(store: EapInMemoryStore, snapshot: EapInMemoryStore) {
   store.phases.splice(0, store.phases.length, ...snapshot.phases);
   store.tasks.splice(0, store.tasks.length, ...snapshot.tasks);
   store.milestones.splice(0, store.milestones.length, ...snapshot.milestones);
+  store.deliveries.splice(0, store.deliveries.length, ...snapshot.deliveries);
   store.scheduleRequests.splice(0, store.scheduleRequests.length, ...snapshot.scheduleRequests);
+  store.impediments.splice(0, store.impediments.length, ...snapshot.impediments);
   store.evidences.splice(0, store.evidences.length, ...snapshot.evidences);
   store.auditLogs.splice(0, store.auditLogs.length, ...snapshot.auditLogs);
 }
@@ -578,6 +830,7 @@ export function makeProject(
     description: overrides.description ?? null,
     glpiTicketId: overrides.glpiTicketId ?? null,
     status: overrides.status ?? "NAO_INICIADO",
+    ...noPlan,
     createdAt: overrides.createdAt ?? now,
     updatedAt: overrides.updatedAt ?? now,
     ...overrides,

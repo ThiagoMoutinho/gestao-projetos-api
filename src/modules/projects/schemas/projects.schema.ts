@@ -77,6 +77,10 @@ export const projectSchema = z.object({
   glpiTicketId: z.string().nullable(),
   ownerId: z.string(),
   status: projectStatusSchema,
+  baselineStartAt: z.string().nullable().describe("Início do planejamento original."),
+  baselineEndAt: z.string().nullable().describe("Término do planejamento original."),
+  plannedStartAt: z.string().nullable().describe("Início planejado vigente."),
+  plannedEndAt: z.string().nullable().describe("Término planejado vigente."),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
