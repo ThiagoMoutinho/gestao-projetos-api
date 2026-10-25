@@ -12,12 +12,17 @@ export type CreateMilestoneInput = {
   type: EapMilestoneType;
   plannedAt?: string | null;
   reviewerId?: string | null;
+  presenterId?: string | null;
+  /** Ajuste em cascata: estende a fase para cobrir a data do marco. */
+  extendPhase?: boolean;
+  justification?: string | null;
 };
 
 export type UpdateMilestoneInput = {
   title?: string;
   description?: string | null;
   reviewerId?: string | null;
+  presenterId?: string;
 };
 
 export type ReviewMilestoneInput = {
@@ -44,6 +49,7 @@ export type EapMilestoneDto = {
   validationNote: string | null;
   validatedAt: string | null;
   reviewerId: string | null;
+  presenterId: string | null;
   createdBy: string;
   updatedBy: string;
   createdAt: string;
@@ -71,6 +77,7 @@ export function toEapMilestoneDto(row: EapMilestoneRow): EapMilestoneDto {
     validationNote: row.validationNote,
     validatedAt: toIso(row.validatedAt),
     reviewerId: row.reviewerId,
+    presenterId: row.presenterId,
     createdBy: row.createdBy,
     updatedBy: row.updatedBy,
     createdAt: row.createdAt.toISOString(),

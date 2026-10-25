@@ -8,6 +8,29 @@ import {
 export { canViewProject };
 export type { ProjectAccessContext } from "../projects/projects.authorization";
 
+/**
+ * Histórico de governança do projeto (participantes, titularidade e situação): ADMIN, PMO,
+ * COORDENADOR e a gestão do projeto. Fornecedores, colaboradores e observadores não consultam.
+ */
+export function canViewProjectGovernanceAudit(context: ProjectAccessContext): boolean {
+  if (
+    context.globalRole === "ADMIN" ||
+    context.globalRole === "PMO" ||
+    context.globalRole === "COORDENADOR"
+  ) {
+    return true;
+  }
+
+  if (context.globalRole === "FORNECEDOR" || context.memberRoles.includes("FORNECEDOR")) {
+    return false;
+  }
+
+  return (
+    isProjectOwner(context.userId, context.ownerId) ||
+    hasProjectManagementRole(context.memberRoles)
+  );
+}
+
 export function canManageEapPhases(context: ProjectAccessContext): boolean {
   if (
     context.globalRole === "ADMIN" ||
@@ -84,13 +107,21 @@ export function canStructureEapMilestones(context: ProjectAccessContext): boolea
   return canManageEapPhases(context);
 }
 
-export function canDeliverEapMilestone(context: ProjectAccessContext): boolean {
+/** Entrega: a gestão, o apresentador designado no marco ou fornecedor vinculado ao projeto. */
+export function canDeliverEapMilestone(
+  context: ProjectAccessContext,
+  milestone?: { presenterId: string | null },
+): boolean {
   if (canStructureEapMilestones(context)) {
     return true;
   }
 
   if (!canViewProject(context)) {
     return false;
+  }
+
+  if (milestone?.presenterId && milestone.presenterId === context.userId) {
+    return true;
   }
 
   return (

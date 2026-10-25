@@ -28,9 +28,9 @@ describe("ReorderPhases", () => {
     const createPhase = makeCreatePhaseUseCase({ repos, runInTransaction: runner });
     const reorderPhases = makeReorderPhasesUseCase({ repos, runInTransaction: runner });
 
-    const first = await createPhase(actor("PMO"), "project-1", { name: "Fase A" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
-    const second = await createPhase(actor("PMO"), "project-1", { name: "Fase B" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
-    const third = await createPhase(actor("PMO"), "project-1", { name: "Fase C" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const first = await createPhase(actor("PMO"), "project-1", { name: "Fase A" });
+    const second = await createPhase(actor("PMO"), "project-1", { name: "Fase B" });
+    const third = await createPhase(actor("PMO"), "project-1", { name: "Fase C" });
 
     const result = await reorderPhases(actor("PMO"), "project-1", [
       { phaseId: third.id, sortOrder: 0 },
@@ -66,8 +66,8 @@ describe("ReorderPhases", () => {
     const runner = makeEapInMemoryTransactionRunner(repos);
     const createPhase = makeCreatePhaseUseCase({ repos, runInTransaction: runner });
     const reorderPhases = makeReorderPhasesUseCase({ repos, runInTransaction: runner });
-    const first = await createPhase(actor("PMO"), "project-1", { name: "Fase A" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
-    const second = await createPhase(actor("PMO"), "project-1", { name: "Fase B" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const first = await createPhase(actor("PMO"), "project-1", { name: "Fase A" });
+    const second = await createPhase(actor("PMO"), "project-1", { name: "Fase B" });
 
     await assert.rejects(
       () => reorderPhases(actor("PMO"), "project-1", [{ phaseId: first.id, sortOrder: 0 }]),

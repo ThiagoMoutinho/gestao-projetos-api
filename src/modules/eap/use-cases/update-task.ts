@@ -2,10 +2,12 @@ import type { AuthUser } from "../../../lib/session";
 import type { UpdateTaskInput } from "../dtos/eap-tasks.dto";
 import { toEapTaskDto } from "../dtos/eap-tasks.dto";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
+import { calculatedTaskStatus } from "./eap-status";
 import {
   assertCanEditTask,
   assertCanView,
   assertValidAssignee,
+  concludedItemLockedError,
   loadPhaseInProject,
   loadProjectAccess,
   loadTaskInPhase,
@@ -28,6 +30,10 @@ export function makeUpdateTaskUseCase(deps: {
     await loadPhaseInProject(deps.repos, projectId, phaseId);
     const current = await loadTaskInPhase(deps.repos, phaseId, taskId);
     assertCanEditTask(context, current.createdBy);
+    // Tarefa concluída só volta a ser editável depois de reaberta (andamento abaixo de 100%, com justificativa).
+    if (calculatedTaskStatus(current) === "CONCLUIDA") {
+      throw concludedItemLockedError("tarefa");
+    }
 
     if (input.assigneeId !== undefined) {
       await assertValidAssignee(deps.repos, projectId, project.ownerId, input.assigneeId);

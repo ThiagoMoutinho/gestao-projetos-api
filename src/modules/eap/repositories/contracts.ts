@@ -147,6 +147,7 @@ export type NewEapMilestoneRecord = {
   baselineAt: Date | null;
   plannedAt: Date | null;
   reviewerId: string | null;
+  presenterId?: string | null;
   createdBy: string;
   updatedBy: string;
 };
@@ -155,6 +156,7 @@ export type EapMilestoneUpdateRecord = {
   title?: string;
   description?: string | null;
   reviewerId?: string | null;
+  presenterId?: string;
   status?: EapMilestoneRow["status"];
   baselineAt?: Date | null;
   plannedAt?: Date | null;

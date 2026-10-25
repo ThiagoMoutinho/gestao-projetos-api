@@ -5,8 +5,10 @@ import type {
   UserRow,
 } from "../dtos/projects.dto";
 import type {
+  NewProjectAuditRecord,
   NewProjectMemberRecord,
   NewProjectRecord,
+  ProjectAuditRepository,
   ProjectMembersRepository,
   ProjectRepos,
   ProjectsRepository,
@@ -16,10 +18,13 @@ import type {
 } from "../repositories/contracts";
 import type { ProjectMemberRole } from "../schemas/projects.schema";
 
+export type InMemoryAuditEntry = NewProjectAuditRecord & { id: string; createdAt: Date };
+
 export type InMemoryStore = {
   users: UserRow[];
   projects: ProjectRow[];
   members: ProjectMemberRow[];
+  audit: InMemoryAuditEntry[];
 };
 
 /** Projeto sem planejamento definido (datas vigentes e linha de base vazias). */
@@ -35,7 +40,16 @@ export function createInMemoryStore(seed?: Partial<InMemoryStore>): InMemoryStor
     users: seed?.users ?? [],
     projects: seed?.projects ?? [],
     members: seed?.members ?? [],
+    audit: seed?.audit ?? [],
   };
+}
+
+class InMemoryProjectAuditRepository implements ProjectAuditRepository {
+  constructor(private readonly store: InMemoryStore) {}
+
+  async create(data: NewProjectAuditRecord) {
+    this.store.audit.push({ ...data, id: crypto.randomUUID(), createdAt: new Date() });
+  }
 }
 
 class InMemoryUsersRepository implements UsersRepository {
@@ -219,6 +233,7 @@ export function makeInMemoryRepos(store: InMemoryStore): ProjectRepos {
     projects: new InMemoryProjectsRepository(store),
     members: new InMemoryProjectMembersRepository(store),
     users: new InMemoryUsersRepository(store),
+    audit: new InMemoryProjectAuditRepository(store),
   };
 }
 

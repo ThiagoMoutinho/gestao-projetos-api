@@ -37,8 +37,7 @@ describe("UpdateTask", () => {
       "project-1",
       {
         name: "Fase 1",
-        plannedStartAt: "2026-06-01T15:00:00.000Z",
-        plannedEndAt: "2026-06-30T15:00:00.000Z",
+
       },
     );
     const created = await makeCreateTaskUseCase({ repos, runInTransaction: runner })(
@@ -91,8 +90,8 @@ describe("UpdateTask", () => {
     const createPhase = makeCreatePhaseUseCase({ repos, runInTransaction: runner });
     const createTask = makeCreateTaskUseCase({ repos, runInTransaction: runner });
     const updateTask = makeUpdateTaskUseCase({ repos, runInTransaction: runner });
-    const phaseA = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase A" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
-    const phaseB = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Fase B" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phaseA = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase A" });
+    const phaseB = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Fase B" });
     const taskA = await createTask(actor("PMO", "pmo-1"), "project-1", phaseA.id, {
       title: "Tarefa A",
     
@@ -144,8 +143,7 @@ describe("UpdateTask", () => {
       "project-1",
       {
         name: "Fase 1",
-        plannedStartAt: "2026-06-01T15:00:00.000Z",
-        plannedEndAt: "2026-06-30T15:00:00.000Z",
+
       },
     );
     const createTask = makeCreateTaskUseCase({ repos, runInTransaction: runner });
@@ -211,8 +209,7 @@ describe("UpdateTask", () => {
       "project-1",
       {
         name: "Fase 1",
-        plannedStartAt: "2026-06-01T15:00:00.000Z",
-        plannedEndAt: "2026-06-30T15:00:00.000Z",
+
       },
     );
     const task = await makeCreateTaskUseCase({ repos, runInTransaction: runner })(

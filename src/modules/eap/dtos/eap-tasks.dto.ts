@@ -11,6 +11,9 @@ export type CreateTaskInput = {
   plannedStartAt?: string | null;
   plannedEndAt?: string | null;
   correctiveMilestoneId?: string | null;
+  /** Ajuste em cascata: estende a fase para cobrir as datas da tarefa. */
+  extendPhase?: boolean;
+  justification?: string | null;
 };
 
 export type UpdateTaskInput = {
@@ -24,6 +27,7 @@ export type UpdateTaskProgressInput = {
   progressPercent?: number;
   actualStartAt?: string | null;
   actualEndAt?: string | null;
+  justification?: string | null;
 };
 
 export type TaskStatusDecisionInput = {

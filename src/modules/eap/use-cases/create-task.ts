@@ -4,7 +4,9 @@ import type { CreateTaskInput } from "../dtos/eap-tasks.dto";
 import { toEapTaskDto } from "../dtos/eap-tasks.dto";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import { syncPhaseStatus } from "./phase-rollup";
+import { extendPhaseToCover } from "./reschedule";
 import {
+  assertCanRescheduleEap,
   assertCanCreateItems,
   assertCanView,
   assertRequiredPlannedRange,
@@ -30,11 +32,17 @@ export function makeCreateTaskUseCase(deps: {
     const { project, context } = await loadProjectAccess(deps.repos, actor, projectId);
     assertCanView(context);
     assertCanCreateItems(context);
+    if (input.extendPhase) {
+      assertCanRescheduleEap(context);
+    }
     await loadPhaseInProject(deps.repos, projectId, phaseId);
 
     const plannedStartAt = parseOptionalDate(input.plannedStartAt);
     const plannedEndAt = parseOptionalDate(input.plannedEndAt);
-    assertRequiredPlannedRange(plannedStartAt, plannedEndAt);
+    // O planejamento da tarefa pode ser definido depois, nos detalhes; quando informado, vem completo.
+    if (plannedStartAt || plannedEndAt) {
+      assertRequiredPlannedRange(plannedStartAt, plannedEndAt);
+    }
 
     await assertValidAssignee(deps.repos, projectId, project.ownerId, input.assigneeId);
 
@@ -94,6 +102,15 @@ export function makeCreateTaskUseCase(deps: {
         },
         actorId: actor.id,
       });
+
+      if (input.extendPhase) {
+        await extendPhaseToCover(txRepos, project, actor, {
+          phaseId,
+          item: { startAt: plannedStartAt, endAt: plannedEndAt },
+          itemLabel: `a tarefa "${task.title}"`,
+          justification: input.justification?.trim() || null,
+        });
+      }
 
       await syncPhaseStatus(txRepos, {
         projectId,

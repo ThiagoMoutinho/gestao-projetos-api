@@ -50,7 +50,7 @@ async function setup() {
   });
   const repos = makeEapInMemoryRepos(store);
   const deps = { repos, runInTransaction: makeEapInMemoryTransactionRunner(repos, store) };
-  const phase = await makeCreatePhaseUseCase(deps)(pmo, "project-1", { name: "Entrega" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+  const phase = await makeCreatePhaseUseCase(deps)(pmo, "project-1", { name: "Entrega" });
   const milestone = await makeCreateMilestoneUseCase(deps)(pmo, "project-1", phase.id, {
     title: "Homologação do sistema",
     type: "HOMOLOGACAO",

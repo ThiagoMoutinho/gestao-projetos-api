@@ -15,6 +15,16 @@ export type PhaseProgress =
 
 const MILESTONE_WEIGHT = 1;
 
+/**
+ * Andamento do marco (decisão do PMO): entregue conta 50%, aceito 100%. Pendente, rejeitado ou com
+ * correções solicitadas contam 0%. A fase só é concluída com o aceite, nunca apenas com a entrega.
+ */
+export function milestonePercent(status: MilestoneFacts["status"]) {
+  if (status === "APROVADO") return 100;
+  if (status === "ENTREGUE") return 50;
+  return 0;
+}
+
 /** 0% → Não iniciada; 1–99% → Em andamento; 100% → Concluída. Cancelamento é decisão explícita e não é derivado. */
 export function deriveTaskStatus(progressPercent: number): Exclude<TaskStatus, "CANCELADA" | "IMPEDIDA"> {
   if (progressPercent >= 100) {
@@ -60,7 +70,7 @@ export function calculatedPhaseStatus(
   return phase.status === "SUSPENSA" ? "SUSPENSA" : derivePhaseStatus(tasks, milestones);
 }
 
-/** Média ponderada: tarefa pelo peso (mínimo 1), marco com peso 1 e 100% somente quando aprovado. */
+/** Média ponderada: tarefa pelo peso (mínimo 1); marco com peso 1, 50% entregue e 100% aceito. */
 export function phaseProgress(
   tasks: ReadonlyArray<TaskFacts>,
   milestones: ReadonlyArray<MilestoneFacts>,
@@ -80,7 +90,7 @@ export function phaseProgress(
     weights += weight;
   }
   for (const milestone of milestones) {
-    weighted += (milestone.status === "APROVADO" ? 100 : 0) * MILESTONE_WEIGHT;
+    weighted += milestonePercent(milestone.status) * MILESTONE_WEIGHT;
     weights += MILESTONE_WEIGHT;
   }
 
@@ -88,6 +98,52 @@ export function phaseProgress(
     return { state: "NO_ELIGIBLE", basisPoints: null };
   }
   return { state: "VALUE", basisPoints: Math.round((weighted * 100) / weights) };
+}
+
+export type PhaseDates = {
+  plannedStartAt: Date | null;
+  plannedEndAt: Date | null;
+  actualStartAt: Date | null;
+  actualEndAt: Date | null;
+};
+
+type DatedTask = Pick<EapTaskRow, "status" | "plannedStartAt" | "plannedEndAt" | "actualStartAt" | "actualEndAt">;
+type DatedMilestone = Pick<EapMilestoneRow, "status" | "plannedAt" | "actualAt">;
+
+function earliest(values: ReadonlyArray<Date | null>) {
+  return values.reduce<Date | null>((min, value) => (value && (!min || value < min) ? value : min), null);
+}
+
+function latest(values: ReadonlyArray<Date | null>) {
+  return values.reduce<Date | null>((max, value) => (value && (!max || value > max) ? value : max), null);
+}
+
+/**
+ * Datas da fase calculadas pelos itens (tarefas canceladas não contam; o marco tem data única):
+ * início planejado = menor início das tarefas (ou o primeiro marco, se não houver tarefa datada);
+ * término planejado = maior término das tarefas ou o último marco, se posterior;
+ * início real = menor início real das tarefas;
+ * término real = só com a fase formalmente concluída: maior término real das tarefas ou a data
+ * efetiva do último marco aceito. Sem itens datados, as datas ficam não informadas.
+ */
+export function phaseDates(
+  tasks: ReadonlyArray<DatedTask>,
+  milestones: ReadonlyArray<DatedMilestone>,
+  concluded: boolean,
+): PhaseDates {
+  const active = tasks.filter((task) => task.status !== "CANCELADA");
+  const milestoneDates = milestones.map((milestone) => milestone.plannedAt);
+  return {
+    plannedStartAt: earliest([...active.map((task) => task.plannedStartAt), ...milestoneDates]),
+    plannedEndAt: latest([...active.map((task) => task.plannedEndAt), ...milestoneDates]),
+    actualStartAt: earliest(active.map((task) => task.actualStartAt)),
+    actualEndAt: concluded
+      ? latest([
+          ...active.map((task) => task.actualEndAt),
+          ...milestones.filter((milestone) => milestone.status === "APROVADO").map((milestone) => milestone.actualAt),
+        ])
+      : null,
+  };
 }
 
 /** Média simples das fases com valor calculável; a cobertura indica quantas fases entraram no cálculo. */
@@ -129,4 +185,58 @@ export function civilDayKey(date: Date) {
 
 export function isFutureCivilDate(value: Date, now = new Date()) {
   return civilDayKey(value) > civilDayKey(now);
+}
+
+/**
+ * Cumprimento de prazo, separado da situação do item. Concluir dentro de um prazo reprogramado
+ * não equivale a concluir no prazo original: a distinção é preservada para os painéis do PMO.
+ */
+export type DeadlinePerformance =
+  | "DONE_ON_ORIGINAL"
+  | "DONE_ON_RESCHEDULED"
+  | "DONE_LATE"
+  | "OPEN_ON_TIME"
+  | "OPEN_ON_RESCHEDULED"
+  | "OPEN_OVERDUE";
+
+export const DEADLINE_PERFORMANCES: readonly DeadlinePerformance[] = [
+  "DONE_ON_ORIGINAL",
+  "DONE_ON_RESCHEDULED",
+  "DONE_LATE",
+  "OPEN_ON_TIME",
+  "OPEN_ON_RESCHEDULED",
+  "OPEN_OVERDUE",
+];
+
+export function deadlinePerformance(
+  item: {
+    state: "OPEN" | "DONE" | "CLOSED";
+    baselineEndAt: Date | null;
+    plannedEndAt: Date | null;
+    actualEndAt: Date | null;
+  },
+  now = new Date(),
+): DeadlinePerformance | null {
+  if (item.state === "CLOSED" || !item.plannedEndAt) {
+    return null;
+  }
+  const planned = civilDayKey(item.plannedEndAt);
+  const original = civilDayKey(item.baselineEndAt ?? item.plannedEndAt);
+
+  if (item.state === "DONE") {
+    if (!item.actualEndAt) {
+      return null;
+    }
+    const actual = civilDayKey(item.actualEndAt);
+    if (actual > planned) {
+      return "DONE_LATE";
+    }
+    return actual <= original ? "DONE_ON_ORIGINAL" : "DONE_ON_RESCHEDULED";
+  }
+
+  const today = civilDayKey(now);
+  if (today > planned) {
+    return "OPEN_OVERDUE";
+  }
+  return today > original ? "OPEN_ON_RESCHEDULED" : "OPEN_ON_TIME";
 }

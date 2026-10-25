@@ -15,7 +15,8 @@ import {
 } from "../dtos/eap-schedule.dto";
 import type { EapTaskRow } from "../dtos/eap-tasks.dto";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
-import { calculatedTaskStatus, civilDayKey } from "./eap-status";
+import { calculatedTaskStatus, civilDayKey, phaseDates } from "./eap-status";
+import { syncPhaseStatus } from "./phase-rollup";
 import {
   assertCanRescheduleEap,
   assertCanView,
@@ -333,10 +334,222 @@ async function applyPlan(
 }
 
 /**
- * Reprogramação de prazo com justificativa. A primeira definição de datas grava o planejamento
- * vigente e a linha de base sem contar como reprogramação; depois, a linha de base nunca muda.
- * Cada reprogramação recebe número sequencial por item e fica no histórico imutável da auditoria.
+ * Aplica uma mudança de planejamento e grava o histórico. A primeira definição de datas grava o
+ * planejamento vigente e a linha de base sem contar como reprogramação; depois, a linha de base nunca
+ * muda. Cada reprogramação recebe número sequencial por item e fica no histórico imutável da auditoria.
  */
+async function changeSchedule(
+  repos: EapRepos,
+  project: ProjectRow,
+  actor: AuthUser,
+  target: RescheduleTarget,
+  next: SchedulePlan,
+  justification: string | null,
+  cascadeFrom?: string,
+) {
+  const projectId = project.id;
+  const single = target.entityType === "MILESTONE";
+  const subject = await loadSubject(repos, project, target);
+  const entityId =
+    subject.entityType === "PROJECT"
+      ? project.id
+      : subject.entityType === "PHASE"
+        ? subject.phase.id
+        : subject.entityType === "TASK"
+          ? subject.task.id
+          : subject.milestone.id;
+
+  if (subject.done) {
+    throw new HttpError(
+      409,
+      cascadeFrom
+        ? "A fase está concluída: o planejamento dela não pode ser estendido."
+        : "Itens concluídos, cancelados ou homologados não podem ter o prazo reprogramado.",
+      "SCHEDULE_ITEM_CLOSED",
+    );
+  }
+
+  const { current } = subject;
+  const startChanged = !single && !sameDay(current.startAt, next.startAt);
+  const endChanged = !sameDay(current.endAt, next.endAt);
+  if (!startChanged && !endChanged) {
+    throw new HttpError(
+      400,
+      "As novas datas são iguais ao planejamento vigente.",
+      "SCHEDULE_UNCHANGED",
+    );
+  }
+
+  const previousIso = toIsoPlan(current);
+  const nextIso = toIsoPlan(next);
+  const changes: EapScheduleFieldChange[] = [
+    ...(startChanged ? [classifyFieldChange("START", previousIso.startAt, nextIso.startAt)] : []),
+    ...(endChanged ? [classifyFieldChange("END", previousIso.endAt, nextIso.endAt)] : []),
+  ];
+  const isReschedule = changes.some((change) => change.kind === "RESCHEDULED");
+  if (isReschedule && (!justification || justification.length < 10)) {
+    throw new HttpError(
+      400,
+      cascadeFrom
+        ? "Estender o prazo da fase é uma reprogramação: informe justificativa com ao menos 10 caracteres."
+        : "A reprogramação exige justificativa com ao menos 10 caracteres.",
+      "SCHEDULE_JUSTIFICATION_REQUIRED",
+    );
+  }
+
+  const impacts = await detectImpacts(repos, project, subject, next);
+  const escalatedToPmo = isReschedule && impacts.some((impact) => ESCALATING_IMPACTS.has(impact.code));
+  const previousEntries = isReschedule
+    ? await repos.audit.listByAction({
+        projectId,
+        action: "SCHEDULE_CHANGE",
+        entityType: subject.entityType,
+        entityId,
+      })
+    : [];
+  const sequence = isReschedule ? previousEntries.filter(isRescheduleEntry).length + 1 : null;
+
+  const now = new Date();
+  const wasOverdue = current.endAt !== null && civilDayKey(current.endAt) < civilDayKey(now);
+  const baseline: SchedulePlan = {
+    startAt: single ? null : (subject.baseline.startAt ?? current.startAt ?? next.startAt),
+    endAt: subject.baseline.endAt ?? current.endAt ?? next.endAt,
+  };
+
+  const updated = await applyPlan(repos, projectId, subject, next, baseline, actor.id, now);
+  if (!updated) {
+    throw subject.entityType === "TASK"
+      ? taskNotFoundError()
+      : subject.entityType === "MILESTONE"
+        ? milestoneNotFoundError()
+        : phaseNotFoundError();
+  }
+
+  const described = changes.map((change) => describeChange(change, single)).join("; ");
+  const reason = cascadeFrom ? ` para cobrir ${cascadeFrom}` : "";
+  const summary = isReschedule
+    ? `Prazo ${subject.label} reprogramado${reason} (reprogramação nº ${sequence}): ${described}.`
+    : `Planejamento ${subject.label} definido${reason}: ${described}.`;
+
+  const entry = await repos.audit.create({
+    id: crypto.randomUUID(),
+    projectId,
+    entityType: subject.entityType,
+    entityId,
+    action: "SCHEDULE_CHANGE",
+    summary,
+    payload: {
+      kind: isReschedule ? "RESCHEDULE" : "PLANNING_DEFINED",
+      sequence,
+      previous: previousIso,
+      next: nextIso,
+      changes,
+      baseline: toIsoPlan(baseline),
+      justification,
+      impacts,
+      escalatedToPmo,
+      wasOverdue: isReschedule && wasOverdue,
+      ...(cascadeFrom ? { cascadeFrom } : {}),
+      ...(subject.entityType === "PROJECT" ? {} : { phaseId: subject.phase.id }),
+    },
+    actorId: actor.id,
+  });
+
+  if (subject.entityType === "TASK" || subject.entityType === "MILESTONE") {
+    await syncPhaseStatus(repos, {
+      projectId,
+      phaseId: subject.phase.id,
+      actorId: actor.id,
+      cause: `Prazo ${subject.label} alterado.`,
+    });
+  }
+
+  return toEapScheduleChangeDto({ ...entry, actorName: actor.name });
+}
+
+function earliestOf(left: Date | null, right: Date | null) {
+  return left && right ? (left < right ? left : right) : (left ?? right);
+}
+
+function latestOf(left: Date | null, right: Date | null) {
+  return left && right ? (left > right ? left : right) : (left ?? right);
+}
+
+/** Planejamento da fase estendido para cobrir o item; null quando o item já cabe nele. Nunca reduz o prazo. */
+export function phaseCoverage(phase: Pick<EapPhaseRow, "plannedStartAt" | "plannedEndAt">, item: SchedulePlan): SchedulePlan | null {
+  const itemStart = item.startAt ?? item.endAt;
+  const itemEnd = item.endAt ?? item.startAt;
+  if (!itemStart || !itemEnd) {
+    return null;
+  }
+  const current = { startAt: phase.plannedStartAt, endAt: phase.plannedEndAt };
+  if (!current.startAt && !current.endAt) {
+    return { startAt: itemStart, endAt: itemEnd };
+  }
+  const startAt = isBefore(itemStart, current.startAt) ? itemStart : current.startAt;
+  const endAt = isAfter(itemEnd, current.endAt) ? itemEnd : current.endAt;
+  return sameDay(startAt, current.startAt) && sameDay(endAt, current.endAt) ? null : { startAt, endAt };
+}
+
+/**
+ * Ajuste em cascata: estende o planejamento da fase para cobrir a tarefa ou o marco, como uma
+ * reprogramação da fase com a mesma justificativa e registro próprio no histórico. Só ocorre quando
+ * o usuário confirma; sem confirmação, o item fora da fase é apenas sinalizado como impacto.
+ */
+export async function extendPhaseToCover(
+  repos: EapRepos,
+  project: ProjectRow,
+  actor: AuthUser,
+  input: {
+    phaseId: string;
+    item: SchedulePlan;
+    /** Item reprogramado: suas datas atuais são substituídas pelas novas no período consolidado. */
+    replaces?: { entityType: "TASK" | "MILESTONE"; id: string };
+    itemLabel: string;
+    justification: string | null;
+  },
+) {
+  const phase = await repos.phases.findByIdAndProject(input.phaseId, project.id);
+  if (!phase) {
+    throw phaseNotFoundError();
+  }
+  // Período consolidado de todos os itens da fase, já com as novas datas do item, em qualquer ordem.
+  const [tasks, milestones] = await Promise.all([
+    repos.tasks.listByPhase(phase.id),
+    repos.milestones.listByPhase(phase.id),
+  ]);
+  const replaced = input.replaces;
+  const consolidated = phaseDates(
+    tasks.map((task) =>
+      replaced?.entityType === "TASK" && task.id === replaced.id
+        ? { ...task, plannedStartAt: input.item.startAt, plannedEndAt: input.item.endAt }
+        : task,
+    ),
+    milestones.map((milestone) =>
+      replaced?.entityType === "MILESTONE" && milestone.id === replaced.id
+        ? { ...milestone, plannedAt: input.item.endAt }
+        : milestone,
+    ),
+    false,
+  );
+  const extended = phaseCoverage(phase, {
+    startAt: earliestOf(consolidated.plannedStartAt, input.item.startAt ?? input.item.endAt),
+    endAt: latestOf(consolidated.plannedEndAt, input.item.endAt),
+  });
+  if (!extended) {
+    return null;
+  }
+  return changeSchedule(
+    repos,
+    project,
+    actor,
+    { entityType: "PHASE", phaseId: phase.id },
+    extended,
+    input.justification,
+    input.itemLabel,
+  );
+}
+
 export function makeRescheduleUseCase(deps: { repos: EapRepos; runInTransaction: EapTransactionRunner }) {
   return async function reschedule(
     actor: AuthUser,
@@ -350,110 +563,23 @@ export function makeRescheduleUseCase(deps: { repos: EapRepos; runInTransaction:
 
     const next = nextPlan(target, input);
     const justification = input.justification?.trim() ? input.justification.trim() : null;
-    const single = target.entityType === "MILESTONE";
 
     return deps.runInTransaction(async (txRepos) => {
-      const subject = await loadSubject(txRepos, project, target);
-      const entityId =
-        subject.entityType === "PROJECT"
-          ? project.id
-          : subject.entityType === "PHASE"
-            ? subject.phase.id
-            : subject.entityType === "TASK"
-              ? subject.task.id
-              : subject.milestone.id;
-
-      if (subject.done) {
-        throw new HttpError(
-          409,
-          "Itens concluídos, cancelados ou homologados não podem ter o prazo reprogramado.",
-          "SCHEDULE_ITEM_CLOSED",
-        );
-      }
-
-      const { current } = subject;
-      const startChanged = !single && !sameDay(current.startAt, next.startAt);
-      const endChanged = !sameDay(current.endAt, next.endAt);
-      if (!startChanged && !endChanged) {
-        throw new HttpError(
-          400,
-          "As novas datas são iguais ao planejamento vigente.",
-          "SCHEDULE_UNCHANGED",
-        );
-      }
-
-      const previousIso = toIsoPlan(current);
-      const nextIso = toIsoPlan(next);
-      const changes: EapScheduleFieldChange[] = [
-        ...(startChanged ? [classifyFieldChange("START", previousIso.startAt, nextIso.startAt)] : []),
-        ...(endChanged ? [classifyFieldChange("END", previousIso.endAt, nextIso.endAt)] : []),
-      ];
-      const isReschedule = changes.some((change) => change.kind === "RESCHEDULED");
-      if (isReschedule && (!justification || justification.length < 10)) {
-        throw new HttpError(
-          400,
-          "A reprogramação exige justificativa com ao menos 10 caracteres.",
-          "SCHEDULE_JUSTIFICATION_REQUIRED",
-        );
-      }
-
-      const impacts = await detectImpacts(txRepos, project, subject, next);
-      const escalatedToPmo = isReschedule && impacts.some((impact) => ESCALATING_IMPACTS.has(impact.code));
-      const previousEntries = isReschedule
-        ? await txRepos.audit.listByAction({
-            projectId,
-            action: "SCHEDULE_CHANGE",
-            entityType: subject.entityType,
-            entityId,
-          })
-        : [];
-      const sequence = isReschedule ? previousEntries.filter(isRescheduleEntry).length + 1 : null;
-
-      const now = new Date();
-      const wasOverdue = current.endAt !== null && civilDayKey(current.endAt) < civilDayKey(now);
-      const baseline: SchedulePlan = {
-        startAt: single ? null : (subject.baseline.startAt ?? current.startAt ?? next.startAt),
-        endAt: subject.baseline.endAt ?? current.endAt ?? next.endAt,
-      };
-
-      const updated = await applyPlan(txRepos, projectId, subject, next, baseline, actor.id, now);
-      if (!updated) {
-        throw subject.entityType === "TASK"
-          ? taskNotFoundError()
-          : subject.entityType === "MILESTONE"
-            ? milestoneNotFoundError()
-            : phaseNotFoundError();
-      }
-
-      const described = changes.map((change) => describeChange(change, single)).join("; ");
-      const summary = isReschedule
-        ? `Prazo ${subject.label} reprogramado (reprogramação nº ${sequence}): ${described}.`
-        : `Planejamento ${subject.label} definido: ${described}.`;
-
-      const entry = await txRepos.audit.create({
-        id: crypto.randomUUID(),
-        projectId,
-        entityType: subject.entityType,
-        entityId,
-        action: "SCHEDULE_CHANGE",
-        summary,
-        payload: {
-          kind: isReschedule ? "RESCHEDULE" : "PLANNING_DEFINED",
-          sequence,
-          previous: previousIso,
-          next: nextIso,
-          changes,
-          baseline: toIsoPlan(baseline),
+      // A fase é estendida antes, para os impactos do item já considerarem o novo planejamento dela.
+      if (input.extendPhase && (target.entityType === "TASK" || target.entityType === "MILESTONE")) {
+        const subject = await loadSubject(txRepos, project, target);
+        await extendPhaseToCover(txRepos, project, actor, {
+          phaseId: target.phaseId,
+          item: next,
+          replaces:
+            target.entityType === "TASK"
+              ? { entityType: "TASK", id: target.taskId }
+              : { entityType: "MILESTONE", id: target.milestoneId },
+          itemLabel: subject.label,
           justification,
-          impacts,
-          escalatedToPmo,
-          wasOverdue: isReschedule && wasOverdue,
-          ...(subject.entityType === "PROJECT" ? {} : { phaseId: subject.phase.id }),
-        },
-        actorId: actor.id,
-      });
-
-      return toEapScheduleChangeDto({ ...entry, actorName: actor.name });
+        });
+      }
+      return changeSchedule(txRepos, project, actor, target, next, justification);
     });
   };
 }

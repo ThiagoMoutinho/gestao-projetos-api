@@ -3,7 +3,7 @@ import type { AuthUser } from "../../../lib/session";
 import { toProjectDetail } from "../dtos/projects.dto";
 import { canTransferOwnership } from "../projects.authorization";
 import type { ProjectRepos, TransactionRunner } from "../repositories/contracts";
-import { loadProjectAccess, ownerNotFoundError } from "./shared";
+import { loadProjectAccess, ownerNotFoundError, recordOwnerTransfer } from "./shared";
 
 export function makeTransferProjectOwnerUseCase(deps: {
   repos: ProjectRepos;
@@ -42,6 +42,8 @@ export function makeTransferProjectOwnerUseCase(deps: {
       throw ownerNotFoundError();
     }
 
+    const previousOwner = await deps.repos.users.findById(project.ownerId);
+
     const updated = await deps.runInTransaction(async (txRepos) => {
       const row = await txRepos.projects.update(projectId, {
         ownerId: newOwnerId,
@@ -54,6 +56,12 @@ export function makeTransferProjectOwnerUseCase(deps: {
 
       await txRepos.members.ensureOwnerMembership(projectId, newOwnerId);
       await txRepos.members.deleteOwnerRole(projectId, project.ownerId);
+      await recordOwnerTransfer(txRepos, {
+        projectId,
+        from: { id: project.ownerId, name: previousOwner?.name ?? null },
+        to: { id: nextOwner.id, name: nextOwner.name },
+        actorId: actor.id,
+      });
       return row;
     });
 

@@ -1,6 +1,7 @@
 import type { Database, DbClient } from "../../../db/types";
 import { makeProjectsController } from "../projects.controller";
 import type { ProjectRepos, TransactionRunner } from "../repositories/contracts";
+import { DrizzleProjectAuditRepository } from "../repositories/project-audit.repository";
 import { DrizzleProjectMembersRepository } from "../repositories/project-members.repository";
 import { DrizzleProjectsRepository } from "../repositories/projects.repository";
 import { DrizzleUsersRepository } from "../repositories/users.repository";
@@ -20,6 +21,7 @@ export function makeProjectRepos(client: DbClient): ProjectRepos {
     projects: new DrizzleProjectsRepository(client),
     members: new DrizzleProjectMembersRepository(client),
     users: new DrizzleUsersRepository(client),
+    audit: new DrizzleProjectAuditRepository(client),
   };
 }
 

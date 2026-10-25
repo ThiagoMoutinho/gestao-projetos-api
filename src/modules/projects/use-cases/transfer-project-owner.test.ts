@@ -68,6 +68,16 @@ describe("TransferProjectOwner", () => {
       ),
       true,
     );
+    assert.equal(store.audit.length, 1);
+    assert.equal(store.audit[0].action, "OWNER_TRANSFER");
+    assert.equal(store.audit[0].entityType, "PROJECT");
+    assert.equal(store.audit[0].actorId, "pmo-1");
+    assert.deepEqual(store.audit[0].payload, {
+      fromOwnerId: "owner-1",
+      fromOwnerName: "Dono atual",
+      toOwnerId: "owner-2",
+      toOwnerName: "Novo dono",
+    });
   });
 
   it("impede GESTOR que não é o titular de transferir o dono", async () => {
@@ -111,5 +121,6 @@ describe("TransferProjectOwner", () => {
         error instanceof HttpError &&
         error.code === "PROJECT_OWNER_TRANSFER_FORBIDDEN",
     );
+    assert.equal(store.audit.length, 0);
   });
 });

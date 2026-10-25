@@ -40,10 +40,7 @@ async function setup(role: AuthUser["role"] = "PMO") {
   const createPhase = makeCreatePhaseUseCase({ repos, runInTransaction: runner });
   const createTask = makeCreateTaskUseCase({ repos, runInTransaction: runner });
   const phase = await createPhase(actor("PMO", "actor-1"), "project-1", {
-    name: "Diagnóstico",
-  
-  plannedStartAt: "2026-06-01T15:00:00.000Z",
-  plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    name: "Diagnóstico" });
 
   return { store, createTask, phase };
 }
@@ -84,8 +81,7 @@ describe("CreateTask", () => {
       "project-1",
       {
         name: "Execução",
-        plannedStartAt: "2026-06-01T15:00:00.000Z",
-        plannedEndAt: "2026-06-30T15:00:00.000Z",
+
       },
     );
     const createTask = makeCreateTaskUseCase({ repos, runInTransaction: runner });
@@ -155,8 +151,7 @@ describe("CreateTask", () => {
       "project-1",
       {
         name: "Fase 1",
-        plannedStartAt: "2026-06-01T15:00:00.000Z",
-        plannedEndAt: "2026-06-30T15:00:00.000Z",
+
       },
     );
     const createTask = makeCreateTaskUseCase({ repos, runInTransaction: runner });

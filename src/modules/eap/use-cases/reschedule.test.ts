@@ -75,8 +75,14 @@ async function setup() {
   const createPhase = makeCreatePhaseUseCase(deps);
   const phase = await createPhase(pmo, "project-1", {
     name: "Construção",
-    plannedStartAt: day("2030-02-01"),
-    plannedEndAt: day("2030-06-30"),
+  });
+  // Planejamento gravado da fase (como em dados existentes): é preservado e não acompanha os itens.
+  const phaseRow = store.phases.find((row) => row.id === phase.id)!;
+  Object.assign(phaseRow, {
+    plannedStartAt: new Date(day("2030-02-01")),
+    plannedEndAt: new Date(day("2030-06-30")),
+    baselineStartAt: new Date(day("2030-02-01")),
+    baselineEndAt: new Date(day("2030-06-30")),
   });
   const task = await makeCreateTaskUseCase(deps)(pmo, "project-1", phase.id, {
     title: "API de integração",
@@ -310,7 +316,7 @@ describe("reprogramação de prazos", () => {
 
   it("recusa quem não é ADMIN, PMO ou gestão do projeto", async () => {
     const ctx = await setup();
-    const target = { entityType: "PHASE" as const, phaseId: ctx.phase.id };
+    const target = { entityType: "TASK" as const, phaseId: ctx.phase.id, taskId: ctx.task.id };
     const input = { plannedStartAt: day("2030-02-01"), plannedEndAt: day("2030-07-15"), justification };
 
     for (const forbidden of [coordinator, supplier, collaborator]) {
@@ -353,8 +359,10 @@ describe("reprogramação de prazos", () => {
     );
     assert.equal(change.escalatedToPmo, true);
 
+    // Reprogramar a tarefa não altera o planejamento gravado da fase nem do projeto.
     const phase = ctx.store.phases.find((row) => row.id === ctx.phase.id);
     assert.equal(phase?.plannedEndAt?.toISOString(), day("2030-06-30"));
+    assert.equal(phase?.baselineEndAt?.toISOString(), day("2030-06-30"));
     assert.equal(ctx.store.projects[0].plannedEndAt?.toISOString(), day("2030-12-31"));
 
     const phaseChange = await ctx.reschedule(pmo, "project-1", { entityType: "PHASE", phaseId: ctx.phase.id }, {

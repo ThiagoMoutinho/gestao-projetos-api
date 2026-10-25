@@ -67,10 +67,7 @@ describe("Fase: responsável e critério de conclusão", () => {
     const phase = await ctx.createPhase(pmo, "project-1", {
       name: "Execução",
       responsibleId: "dev-1",
-      completionCriteria: "Todas as entregas homologadas.",
-    
-    plannedStartAt: "2026-06-01T15:00:00.000Z",
-    plannedEndAt: "2026-06-30T15:00:00.000Z"});
+      completionCriteria: "Todas as entregas homologadas." });
 
     assert.equal(phase.responsibleId, "dev-1");
     assert.equal(phase.completionCriteria, "Todas as entregas homologadas.");
@@ -101,12 +98,12 @@ describe("Fase: responsável e critério de conclusão", () => {
     const ctx = setup();
     await assert.rejects(
       () =>
-        ctx.createPhase(pmo, "project-1", { name: "Execução", responsibleId: "outsider-1" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"}),
+        ctx.createPhase(pmo, "project-1", { name: "Execução", responsibleId: "outsider-1" }),
       (error: unknown) =>
         error instanceof HttpError && error.code === "PHASE_RESPONSIBLE_NOT_MEMBER",
     );
 
-    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" });
     await assert.rejects(
       () => ctx.updatePhase(pmo, "project-1", phase.id, { responsibleId: "inexistente" }),
       (error: unknown) => error instanceof HttpError && error.code === "USER_NOT_FOUND",
@@ -116,7 +113,7 @@ describe("Fase: responsável e critério de conclusão", () => {
 
   it("mantém a edição restrita a quem pode editar a fase", async () => {
     const ctx = setup();
-    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" });
 
     await assert.rejects(
       () =>
@@ -151,10 +148,7 @@ describe("Evidência vinculada à fase", () => {
     const ctx = setup();
     const phase = await ctx.createPhase(pmo, "project-1", {
       name: "Execução",
-      responsibleId: "dev-1",
-    
-    plannedStartAt: "2026-06-01T15:00:00.000Z",
-    plannedEndAt: "2026-06-30T15:00:00.000Z"});
+      responsibleId: "dev-1" });
 
     const evidence = await ctx.createEvidence(pmo, "project-1", {
       title: "Ata de abertura",
@@ -191,7 +185,7 @@ describe("Evidência vinculada à fase", () => {
 
   it("não aceita fase de outro projeto", async () => {
     const ctx = setup();
-    const other = await ctx.createPhase(pmo, "project-2", { name: "Outra" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const other = await ctx.createPhase(pmo, "project-2", { name: "Outra" });
 
     await assert.rejects(
       () =>
@@ -209,7 +203,7 @@ describe("Evidência vinculada à fase", () => {
 describe("Histórico de alterações", () => {
   it("lista a auditoria do item e de suas evidências, mais recente primeiro", async () => {
     const ctx = setup();
-    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" });
     await ctx.updatePhase(pmo, "project-1", phase.id, { name: "Execução revisada" });
     await ctx.createEvidence(pmo, "project-1", {
       title: "Ata",
@@ -223,6 +217,7 @@ describe("Histórico de alterações", () => {
       entityId: phase.id,
     });
 
+    // A tarefa não altera o planejamento gravado da fase: nenhum registro automático de datas.
     assert.deepEqual(
       history.data.map((row) => `${row.entityType}:${row.action}`),
       ["EVIDENCE:CREATE", "PHASE:UPDATE", "PHASE:CREATE"],
@@ -235,8 +230,8 @@ describe("Histórico de alterações", () => {
 
   it("bloqueia quem não consulta o projeto e item de outro projeto", async () => {
     const ctx = setup();
-    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
-    const other = await ctx.createPhase(pmo, "project-2", { name: "Outra" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" });
+    const other = await ctx.createPhase(pmo, "project-2", { name: "Outra" });
 
     await assert.rejects(
       () =>

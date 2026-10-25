@@ -70,7 +70,7 @@ function legacyRow(overrides: Partial<EapAuditEntryRow>): EapAuditEntryRow {
 describe("Histórico: justificativas de cancelamento e reativação", () => {
   it("retorna cada justificativa vinculada ao próprio evento e preserva ambos", async () => {
     const ctx = setup();
-    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" });
     const task = await ctx.createTask(pmo, "project-1", phase.id, {
       title: "teste",
       assigneeId: "dev-1",
@@ -107,7 +107,7 @@ describe("Histórico: justificativas de cancelamento e reativação", () => {
 
   it("registra o percentual anterior nos novos eventos de andamento", async () => {
     const ctx = setup();
-    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" });
     const task = await ctx.createTask(pmo, "project-1", phase.id, {
       title: "Tarefa",
       assigneeId: "dev-1",

@@ -13,11 +13,15 @@ export type RescheduleRangeInput = {
   plannedStartAt: string;
   plannedEndAt: string;
   justification?: string | null;
+  /** Tarefa e marco: estende a fase para cobrir o item (ajuste em cascata). */
+  extendPhase?: boolean;
 };
 
 export type RescheduleMilestoneInput = {
   plannedAt: string;
   justification?: string | null;
+  /** Tarefa e marco: estende a fase para cobrir o item (ajuste em cascata). */
+  extendPhase?: boolean;
 };
 
 export type ListScheduleChangesQuery = {

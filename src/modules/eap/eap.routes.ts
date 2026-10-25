@@ -713,7 +713,7 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
         schema: {
           operationId: "listEapAudit",
           tags: ["EAP"],
-          summary: "Listar histórico de alterações de um item da EAP",
+          summary: "Listar histórico de alterações de um item da EAP, do projeto ou de um participante",
           security: [{ cookieAuth: [] }],
           params: projectIdParamsSchema,
           querystring: listAuditQuerySchema,

@@ -23,7 +23,7 @@ import {
 } from "../eap.authorization";
 import type { EapMilestoneRow } from "../dtos/eap-milestones.dto";
 import type { EapRepos } from "../repositories/contracts";
-import { isFutureCivilDate } from "./eap-status";
+import { civilDayKey, isFutureCivilDate } from "./eap-status";
 
 export async function loadProjectAccess(
   repos: EapRepos,
@@ -205,8 +205,11 @@ export function assertCanStructureMilestones(context: ProjectAccessContext) {
   }
 }
 
-export function assertCanDeliverMilestone(context: ProjectAccessContext) {
-  if (!canDeliverEapMilestone(context)) {
+export function assertCanDeliverMilestone(
+  context: ProjectAccessContext,
+  milestone?: { presenterId: string | null },
+) {
+  if (!canDeliverEapMilestone(context, milestone)) {
     throw new HttpError(
       403,
       "Você não tem permissão para registrar a entrega deste marco.",
@@ -304,6 +307,52 @@ export async function assertValidMilestoneReviewer(
       400,
       "O homologador deve participar do projeto e não pode atuar como fornecedor.",
       "MILESTONE_REVIEWER_INVALID",
+    );
+  }
+}
+
+/**
+ * O apresentador do marco é designado pela gestão e precisa participar do projeto (o dono ou qualquer
+ * função, inclusive fornecedor), sendo diferente do gestor validador.
+ */
+export async function assertValidMilestonePresenter(
+  repos: EapRepos,
+  context: ProjectAccessContext,
+  projectId: string,
+  presenterId: string | undefined,
+  reviewerId: string | null,
+) {
+  if (presenterId === undefined) {
+    return;
+  }
+
+  if (!canStructureEapMilestones(context)) {
+    throw new HttpError(
+      403,
+      "Somente a gestão do projeto pode designar quem apresenta o marco.",
+      "MILESTONE_PRESENTER_FORBIDDEN",
+    );
+  }
+
+  const presenter = await repos.users.findById(presenterId);
+  if (!presenter) {
+    throw new HttpError(404, "Usuário não encontrado.", "USER_NOT_FOUND");
+  }
+
+  const memberRoles = await repos.members.findRoles(projectId, presenterId);
+  if (presenterId !== context.ownerId && memberRoles.length === 0) {
+    throw new HttpError(
+      400,
+      "Quem apresenta o marco deve participar do projeto.",
+      "MILESTONE_PRESENTER_INVALID",
+    );
+  }
+
+  if (presenterId === reviewerId) {
+    throw new HttpError(
+      400,
+      "Quem apresenta o marco não pode ser o gestor que vai validá-lo.",
+      "MILESTONE_PRESENTER_IS_REVIEWER",
     );
   }
 }
@@ -423,6 +472,54 @@ export function assertActualDateNotFuture(value: Date | null) {
       "TASK_ACTUAL_DATE_FUTURE",
     );
   }
+}
+
+export type ActualDateField = "actualStartAt" | "actualEndAt";
+
+/**
+ * Datas reais que já estavam registradas e foram alteradas ou apagadas. O primeiro registro
+ * de uma data não é correção; mudar o horário dentro do mesmo dia civil também não.
+ */
+export function correctedActualDates(
+  current: Record<ActualDateField, Date | null>,
+  informed: Partial<Record<ActualDateField, Date | null>>,
+): ActualDateField[] {
+  return (["actualStartAt", "actualEndAt"] as const).filter((field) => {
+    const previous = current[field];
+    const next = informed[field];
+    return (
+      next !== undefined &&
+      previous !== null &&
+      (next === null || civilDayKey(next) !== civilDayKey(previous))
+    );
+  });
+}
+
+export function assertCorrectionJustification(
+  corrected: readonly ActualDateField[],
+  justification: string | null,
+) {
+  if (corrected.length > 0 && (!justification || justification.length < 10)) {
+    throw new HttpError(
+      400,
+      "A correção de uma data real já registrada exige justificativa com ao menos 10 caracteres.",
+      "ACTUAL_DATE_CORRECTION_JUSTIFICATION_REQUIRED",
+    );
+  }
+}
+
+/** Item concluído (fase concluída, tarefa concluída ou marco aceito) fica somente leitura. */
+export const concludedItemLockedError = (item: "fase" | "tarefa" | "marco") =>
+  new HttpError(
+    409,
+    item === "marco"
+      ? "Marco aceito não pode ser alterado."
+      : `${item === "fase" ? "Fase concluída" : "Tarefa concluída"} não pode ser alterada. Ela volta a ser editável quando retornar para andamento.`,
+    "ITEM_CONCLUDED_LOCKED",
+  );
+
+export function normalizeJustification(value: string | null | undefined) {
+  return value?.trim() ? value.trim() : null;
 }
 
 export const phaseNotFoundError = () =>

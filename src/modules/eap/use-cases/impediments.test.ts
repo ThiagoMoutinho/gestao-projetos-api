@@ -65,7 +65,7 @@ function setup() {
 }
 
 async function taskInProgress(ctx: ReturnType<typeof setup>) {
-  const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+  const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" });
   const task = await ctx.createTask(pmo, "project-1", phase.id, {
     title: "Integração",
     assigneeId: "forn-1",
@@ -186,7 +186,11 @@ describe("Impedimentos da tarefa", () => {
     await assert.rejects(() => ctx.register(pmo, "project-1", phase.id, task.id, reason), rejectsWith("IMPEDIMENT_TASK_CLOSED"));
 
     const other = await ctx.createTask(pmo, "project-1", phase.id, { title: "Concluída", assigneeId: "forn-1" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
-    await ctx.updateProgress(supplier, "project-1", phase.id, other.id, { progressPercent: 100 });
+    await ctx.updateProgress(supplier, "project-1", phase.id, other.id, {
+      progressPercent: 100,
+      actualStartAt: "2026-01-05T15:00:00.000Z",
+      actualEndAt: "2026-01-20T15:00:00.000Z",
+    });
     await assert.rejects(() => ctx.register(pmo, "project-1", phase.id, other.id, reason), rejectsWith("IMPEDIMENT_TASK_CLOSED"));
     assert.equal(ctx.store.impediments.length, 0);
   });

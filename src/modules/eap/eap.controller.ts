@@ -303,6 +303,7 @@ export function makeEapController(useCases: EapPhaseUseCases) {
       );
     },
 
+
     async delete(
       request: FastifyRequest<{ Params: { id: string; phaseId: string } }>,
       reply: FastifyReply,

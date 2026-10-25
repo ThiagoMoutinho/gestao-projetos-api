@@ -19,13 +19,6 @@ const isoDateTimeSchema = z
     message: "Data inválida.",
   });
 
-function requiredIsoDateTime(message: string) {
-  return z
-    .string(message)
-    .min(1, message)
-    .refine((value) => !Number.isNaN(Date.parse(value)), "Data inválida.");
-}
-
 export const taskParamsSchema = z.object({
   id: z.string().min(1),
   phaseId: z.string().min(1),
@@ -38,14 +31,28 @@ export const createTaskBodySchema = z
     description: z.string().trim().max(4000).nullable().optional(),
     assigneeId: z.string().min(1).nullable().optional(),
     weight: z.number().int().min(1).optional(),
-    plannedStartAt: requiredIsoDateTime("Informe o início planejado."),
-    plannedEndAt: requiredIsoDateTime("Informe o término planejado."),
+    plannedStartAt: isoDateTimeSchema
+      .nullable()
+      .optional()
+      .describe("Opcional na criação; o planejamento pode ser definido depois, nos detalhes da tarefa."),
+    plannedEndAt: isoDateTimeSchema.nullable().optional(),
     correctiveMilestoneId: z
       .string()
       .min(1)
       .nullable()
       .optional()
       .describe("Marco da mesma fase com correções pendentes que a tarefa atende."),
+    extendPhase: z
+      .boolean()
+      .optional()
+      .describe("Estende o planejamento da fase para cobrir as datas da tarefa (ajuste em cascata; exige permissão de reprogramar)."),
+    justification: z
+      .string()
+      .trim()
+      .max(2000)
+      .nullable()
+      .optional()
+      .describe("Justificativa do ajuste em cascata, obrigatória (mín. 10 caracteres) quando estender um prazo já definido da fase."),
   })
   .strict();
 
@@ -72,9 +79,16 @@ export const updateTaskProgressBodySchema = z
       .describe("A situação é derivada: 0% não iniciada, 1–99% em andamento, 100% concluída."),
     actualStartAt: isoDateTimeSchema.nullable().optional(),
     actualEndAt: isoDateTimeSchema.nullable().optional(),
+    justification: z
+      .string()
+      .trim()
+      .max(2000)
+      .nullable()
+      .optional()
+      .describe("Obrigatória (mín. 10 caracteres) ao corrigir uma data real já registrada."),
   })
   .strict()
-  .refine((value) => Object.keys(value).length > 0, {
+  .refine((value) => Object.keys(value).some((key) => key !== "justification"), {
     message: "Informe ao menos um campo para atualizar.",
   });
 

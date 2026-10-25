@@ -41,10 +41,7 @@ describe("UpdatePhase", () => {
     const createPhase = makeCreatePhaseUseCase({ repos, runInTransaction: runner });
     const updatePhase = makeUpdatePhaseUseCase({ repos, runInTransaction: runner });
     const phase = await createPhase(actor("PMO", "pmo-1"), "project-1", {
-      name: "Fase 1",
-    
-    plannedStartAt: "2026-06-01T15:00:00.000Z",
-    plannedEndAt: "2026-06-30T15:00:00.000Z"});
+      name: "Fase 1" });
 
     await assert.rejects(
       () =>
@@ -69,10 +66,7 @@ describe("UpdatePhase", () => {
     const createPhase = makeCreatePhaseUseCase({ repos, runInTransaction: runner });
     const updatePhase = makeUpdatePhaseUseCase({ repos, runInTransaction: runner });
     const phase = await createPhase(actor("PMO", "pmo-1"), "project-2", {
-      name: "Fase do projeto 2",
-    
-    plannedStartAt: "2026-06-01T15:00:00.000Z",
-    plannedEndAt: "2026-06-30T15:00:00.000Z"});
+      name: "Fase do projeto 2" });
 
     await assert.rejects(
       () =>
@@ -95,8 +89,6 @@ describe("UpdatePhase", () => {
     const updatePhase = makeUpdatePhaseUseCase({ repos, runInTransaction: runner });
     const created = await createPhase(actor("PMO", "pmo-1"), "project-1", {
       name: "Fase 1",
-      plannedStartAt: "2026-01-01T00:00:00.000Z",
-      plannedEndAt: "2026-02-01T00:00:00.000Z",
     });
 
     const updated = await updatePhase(actor("PMO", "pmo-1"), "project-1", created.id, {

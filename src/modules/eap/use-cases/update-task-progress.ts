@@ -10,9 +10,12 @@ import {
   assertActualDates,
   assertCanUpdateTaskProgress,
   assertCanView,
+  assertCorrectionJustification,
+  correctedActualDates,
   loadPhaseInProject,
   loadProjectAccess,
   loadTaskInPhase,
+  normalizeJustification,
   parseOptionalDate,
   taskNotFoundError,
 } from "./shared";
@@ -48,6 +51,16 @@ export function makeUpdateTaskProgressUseCase(deps: {
 
     const progressPercent = input.progressPercent ?? current.progressPercent;
     const status = deriveTaskStatus(progressPercent);
+    const justification = normalizeJustification(input.justification);
+    const completing = progressPercent === 100 && current.progressPercent < 100;
+    const reopening = current.progressPercent === 100 && progressPercent < 100;
+    if (reopening && (!justification || justification.length < 10)) {
+      throw new HttpError(
+        400,
+        "Reabrir uma tarefa concluída exige justificativa com ao menos 10 caracteres.",
+        "TASK_REOPEN_JUSTIFICATION_REQUIRED",
+      );
+    }
 
     const informedStart =
       input.actualStartAt !== undefined ? parseOptionalDate(input.actualStartAt) : undefined;
@@ -56,26 +69,36 @@ export function makeUpdateTaskProgressUseCase(deps: {
     assertActualDateNotFuture(informedStart ?? null);
     assertActualDateNotFuture(informedEnd ?? null);
 
+    const corrected = correctedActualDates(current, {
+      actualStartAt: informedStart,
+      actualEndAt: informedEnd,
+    });
+    assertCorrectionJustification(corrected, justification);
+
     let actualStartAt = informedStart !== undefined ? informedStart : current.actualStartAt;
     let actualEndAt = informedEnd !== undefined ? informedEnd : current.actualEndAt;
     const automaticDates: Record<string, string | null> = {};
     const today = civilToday();
 
-    if (progressPercent > 0 && !actualStartAt && informedStart === undefined) {
+    // A conclusão nunca preenche datas reais sozinha: início e término precisam ser confirmados.
+    if (!completing && progressPercent > 0 && !actualStartAt && informedStart === undefined) {
       actualStartAt = today;
       automaticDates.actualStartAt = today.toISOString();
     }
-    if (progressPercent === 100 && !actualEndAt && informedEnd === undefined) {
-      actualEndAt = today;
-      automaticDates.actualEndAt = today.toISOString();
+    if (progressPercent === 100 && (!actualStartAt || !actualEndAt)) {
+      throw new HttpError(
+        400,
+        "Para concluir a tarefa, informe as datas reais de início e de término.",
+        "TASK_COMPLETION_ACTUAL_DATES_REQUIRED",
+      );
     }
-    const reopened = current.progressPercent === 100 && progressPercent < 100;
-    if (reopened && actualEndAt && informedEnd === undefined) {
+    if (reopening && actualEndAt && informedEnd === undefined) {
       automaticDates.previousActualEndAt = actualEndAt.toISOString();
       automaticDates.actualEndAt = null;
       actualEndAt = null;
     }
     assertActualDates(actualStartAt, actualEndAt);
+    const progressChanged = progressPercent !== current.progressPercent;
 
     return deps.runInTransaction(async (txRepos) => {
       const updated = await txRepos.tasks.update(taskId, phaseId, {
@@ -97,15 +120,33 @@ export function makeUpdateTaskProgressUseCase(deps: {
         entityType: "TASK",
         entityId: updated.id,
         action: "UPDATE",
-        summary: `Progresso da tarefa "${updated.title}" atualizado.`,
+        summary: completing
+          ? `Tarefa "${updated.title}" concluída.`
+          : reopening
+            ? `Tarefa "${updated.title}" reaberta: andamento de 100% para ${progressPercent}%.`
+            : progressChanged
+            ? `Progresso da tarefa "${updated.title}" atualizado.`
+            : corrected.length > 0
+              ? `Datas reais da tarefa "${updated.title}" corrigidas.`
+              : `Datas reais da tarefa "${updated.title}" registradas.`,
         payload: {
-          kind: "PROGRESS",
+          kind: progressChanged ? "PROGRESS" : "ACTUAL_DATES",
+          ...(completing ? { completed: true } : {}),
+          ...(reopening ? { reopened: true } : {}),
           ...(input.progressPercent !== undefined
             ? { previousProgressPercent: current.progressPercent }
             : {}),
           progressPercent: input.progressPercent,
           actualStartAt: input.actualStartAt,
           actualEndAt: input.actualEndAt,
+          ...(input.actualStartAt !== undefined
+            ? { previousActualStartAt: current.actualStartAt?.toISOString() ?? null }
+            : {}),
+          ...(input.actualEndAt !== undefined
+            ? { previousActualEndAt: current.actualEndAt?.toISOString() ?? null }
+            : {}),
+          ...(corrected.length > 0 ? { correctedFields: corrected } : {}),
+          ...(justification ? { justification } : {}),
           ...(Object.keys(automaticDates).length > 0 ? { automaticDates } : {}),
         },
         actorId: actor.id,

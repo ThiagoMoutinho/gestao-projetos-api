@@ -1,6 +1,8 @@
+import { HttpError } from "../../../lib/http-error";
 import type { AuthUser } from "../../../lib/session";
 import type { ListAuditQuery } from "../dtos/eap-audit.dto";
 import { toEapAuditEntryDto } from "../dtos/eap-audit.dto";
+import { canViewProjectGovernanceAudit } from "../eap.authorization";
 import type { EapRepos } from "../repositories/contracts";
 import {
   assertCanView,
@@ -12,7 +14,22 @@ import {
 
 const DEFAULT_LIMIT = 50;
 
+const GOVERNANCE_ENTITY_TYPES = new Set<ListAuditQuery["entityType"]>(["PROJECT", "PROJECT_MEMBER"]);
+
 async function assertEntityInProject(repos: EapRepos, projectId: string, query: ListAuditQuery) {
+  if (query.entityType === "PROJECT") {
+    if (query.entityId !== projectId) {
+      throw new HttpError(404, "Projeto não encontrado.", "PROJECT_NOT_FOUND");
+    }
+    return;
+  }
+
+  // Participantes removidos deixam de existir, mas o histórico continua consultável;
+  // a consulta é sempre restrita aos registros do próprio projeto.
+  if (query.entityType === "PROJECT_MEMBER") {
+    return;
+  }
+
   if (query.entityType === "PHASE") {
     const phase = await repos.phases.findByIdAndProject(query.entityId, projectId);
     if (!phase) {
@@ -41,6 +58,13 @@ export function makeListAuditUseCase(deps: { repos: EapRepos }) {
   return async function listAudit(actor: AuthUser, projectId: string, query: ListAuditQuery) {
     const { context } = await loadProjectAccess(deps.repos, actor, projectId);
     assertCanView(context);
+    if (GOVERNANCE_ENTITY_TYPES.has(query.entityType) && !canViewProjectGovernanceAudit(context)) {
+      throw new HttpError(
+        403,
+        "Você não tem permissão para consultar o histórico de governança deste projeto.",
+        "PROJECT_AUDIT_FORBIDDEN",
+      );
+    }
     await assertEntityInProject(deps.repos, projectId, query);
 
     const rows = await deps.repos.audit.listByEntity({

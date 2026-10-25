@@ -81,8 +81,8 @@ async function setup() {
   const createPhase = makeCreatePhaseUseCase(deps);
   const createTask = makeCreateTaskUseCase(deps);
   const createMilestone = makeCreateMilestoneUseCase(deps);
-  const phase = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
-  const otherPhase = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Outra" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+  const phase = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Execução" });
+  const otherPhase = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Outra" });
   const task = await createTask(actor("PMO", "pmo-1"), "project-1", phase.id, {
     title: "Levantar requisitos",
   

@@ -31,8 +31,7 @@ describe("ReorderTasks", () => {
       "project-1",
       {
         name: "Fase",
-        plannedStartAt: "2026-06-01T15:00:00.000Z",
-        plannedEndAt: "2026-06-30T15:00:00.000Z",
+
       },
     );
     const createTask = makeCreateTaskUseCase({ repos, runInTransaction: runner });
@@ -67,8 +66,7 @@ describe("ReorderTasks", () => {
       "project-1",
       {
         name: "Fase",
-        plannedStartAt: "2026-06-01T15:00:00.000Z",
-        plannedEndAt: "2026-06-30T15:00:00.000Z",
+
       },
     );
     const createTask = makeCreateTaskUseCase({ repos, runInTransaction: runner });

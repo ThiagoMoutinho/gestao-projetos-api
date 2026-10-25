@@ -115,12 +115,17 @@ describe("regra de situação da EAP", () => {
     );
   });
 
-  it("mantém a fórmula de andamento: marco entregue conta 0% e aprovado conta 100%", () => {
+  it("aplica a fórmula de andamento: marco entregue conta 50%, aprovado 100% e rejeitado 0%", () => {
     const tasks = [{ status: "CONCLUIDA", progressPercent: 100, weight: 1 }] as never[];
     assert.deepEqual(phaseProgress(tasks, [{ status: "ENTREGUE" }] as never[]), {
       state: "VALUE",
+      basisPoints: 7500,
+    });
+    assert.deepEqual(phaseProgress(tasks, [{ status: "REJEITADO" }] as never[]), {
+      state: "VALUE",
       basisPoints: 5000,
     });
+    assert.equal(derivePhaseStatus(tasks, [{ status: "ENTREGUE" }] as never[]), "EM_ANDAMENTO");
     assert.deepEqual(phaseProgress(tasks, [{ status: "APROVADO" }] as never[]), {
       state: "VALUE",
       basisPoints: 10000,
@@ -139,7 +144,7 @@ describe("regra de situação da EAP", () => {
 describe("automação de situação e datas", () => {
   it("atualiza tarefa e fase pelo andamento, preenche datas reais e audita como automático", async () => {
     const ctx = setup();
-    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" });
     const task = await ctx.createTask(pmo, "project-1", phase.id, {
       title: "Codificar",
       assigneeId: "dev-1",
@@ -166,16 +171,29 @@ describe("automação de situação e datas", () => {
 
     const done = await ctx.updateProgress(dev, "project-1", phase.id, task.id, {
       progressPercent: 100,
+      actualEndAt: today,
     });
     assert.equal(done.status, "CONCLUIDA");
     assert.equal(done.actualEndAt, today);
     assert.equal(phaseRow(ctx, phase.id).status, "CONCLUIDA");
     assert.equal(phaseRow(ctx, phase.id).actualEndAt?.toISOString(), today);
 
+    await assert.rejects(
+      () => ctx.updateProgress(dev, "project-1", phase.id, task.id, { progressPercent: 60 }),
+      rejectsWith("TASK_REOPEN_JUSTIFICATION_REQUIRED"),
+    );
+    assert.equal(phaseRow(ctx, phase.id).status, "CONCLUIDA");
+
     const reopened = await ctx.updateProgress(dev, "project-1", phase.id, task.id, {
       progressPercent: 60,
+      justification: "Homologação apontou ajuste pendente.",
     });
     assert.equal(reopened.status, "EM_ANDAMENTO");
+    const reopenEntry = ctx.store.auditLogs.findLast((log) => log.entityId === task.id && log.action === "UPDATE");
+    assert.deepEqual(
+      [(reopenEntry?.payload as { reopened?: boolean }).reopened, (reopenEntry?.payload as { justification?: string }).justification],
+      [true, "Homologação apontou ajuste pendente."],
+    );
     assert.equal(reopened.actualEndAt, null);
     assert.equal(reopened.actualStartAt, today);
     const reopenAudit = ctx.store.auditLogs.findLast(
@@ -198,7 +216,7 @@ describe("automação de situação e datas", () => {
 
   it("aceita data retroativa informada e rejeita data futura", async () => {
     const ctx = setup();
-    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" });
     const task = await ctx.createTask(pmo, "project-1", phase.id, { title: "Tarefa" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
 
     const updated = await ctx.updateProgress(pmo, "project-1", phase.id, task.id, {
@@ -218,9 +236,13 @@ describe("automação de situação e datas", () => {
 
   it("homologação: só o marco aprovado conclui a fase e o fornecedor não aprova a própria entrega", async () => {
     const ctx = setup();
-    const phase = await ctx.createPhase(pmo, "project-1", { name: "Entrega" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phase = await ctx.createPhase(pmo, "project-1", { name: "Entrega" });
     const task = await ctx.createTask(pmo, "project-1", phase.id, { title: "Tarefa" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
-    await ctx.updateProgress(pmo, "project-1", phase.id, task.id, { progressPercent: 100 });
+    await ctx.updateProgress(pmo, "project-1", phase.id, task.id, {
+      progressPercent: 100,
+      actualStartAt: "2026-01-05T15:00:00.000Z",
+      actualEndAt: "2026-01-20T15:00:00.000Z",
+    });
     assert.equal(phaseRow(ctx, phase.id).status, "CONCLUIDA");
 
     const milestone = await ctx.createMilestone(pmo, "project-1", phase.id, {
@@ -256,7 +278,7 @@ describe("automação de situação e datas", () => {
 
   it("cancelamento e reativação são decisões da gestão com justificativa", async () => {
     const ctx = setup();
-    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" });
     const task = await ctx.createTask(pmo, "project-1", phase.id, {
       title: "Tarefa",
       assigneeId: "dev-1",
@@ -295,7 +317,10 @@ describe("automação de situação e datas", () => {
     assert.equal(reactivated.status, "EM_ANDAMENTO");
     assert.equal(phaseRow(ctx, phase.id).status, "EM_ANDAMENTO");
 
-    await ctx.updateProgress(pmo, "project-1", phase.id, task.id, { progressPercent: 100 });
+    await ctx.updateProgress(pmo, "project-1", phase.id, task.id, {
+      progressPercent: 100,
+      actualEndAt: civilToday().toISOString(),
+    });
     await assert.rejects(
       () => ctx.cancelTask(pmo, "project-1", phase.id, task.id, justification),
       rejectsWith("TASK_CANCEL_CONCLUDED"),
@@ -305,10 +330,19 @@ describe("automação de situação e datas", () => {
 
   it("fase suspensa não muda automaticamente e retoma pela situação calculada", async () => {
     const ctx = setup();
-    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phase = await ctx.createPhase(pmo, "project-1", { name: "Execução" });
     const task = await ctx.createTask(pmo, "project-1", phase.id, { title: "Tarefa" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
 
-    const suspended = await ctx.updatePhase(pmo, "project-1", phase.id, { suspended: true });
+    await assert.rejects(
+      () => ctx.updatePhase(pmo, "project-1", phase.id, { suspended: true }),
+      rejectsWith("PHASE_SUSPEND_JUSTIFICATION_REQUIRED"),
+    );
+    const suspended = await ctx.updatePhase(pmo, "project-1", phase.id, {
+      suspended: true,
+      justification: "Fornecedor aguardando contrato.",
+    });
+    const suspendLog = ctx.store.auditLogs.findLast((log) => log.entityId === phase.id && log.action === "STATUS_CHANGE");
+    assert.equal((suspendLog?.payload as { justification?: string }).justification, "Fornecedor aguardando contrato.");
     assert.equal(suspended.status, "SUSPENSA");
     assert.equal(suspended.calculatedStatus, "SUSPENSA");
 

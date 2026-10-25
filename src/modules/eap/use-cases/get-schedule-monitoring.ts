@@ -6,7 +6,7 @@ import {
   type EapScheduleMonitoringDto,
 } from "../dtos/eap-schedule.dto";
 import type { EapRepos } from "../repositories/contracts";
-import { calculatedTaskStatus, civilDayKey } from "./eap-status";
+import { calculatedTaskStatus, civilDayKey, deadlinePerformance } from "./eap-status";
 import { assertCanView, loadProjectAccess, usesDeliveryRounds } from "./shared";
 
 type MonitoredItem = EapScheduleMonitoringDto["items"][number];
@@ -28,7 +28,7 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
     const { project, context } = await loadProjectAccess(deps.repos, actor, projectId);
     assertCanView(context);
 
-    const [phases, tasks, milestones, deliveries, scheduleEntries, decisions] = await Promise.all([
+    const [phaseRows, tasks, milestones, deliveries, scheduleEntries, decisions] = await Promise.all([
       deps.repos.phases.listByProject(projectId),
       deps.repos.tasks.listByProject(projectId),
       deps.repos.milestones.listByProject(projectId),
@@ -36,6 +36,9 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
       deps.repos.audit.listByAction({ projectId, action: "SCHEDULE_CHANGE" }),
       deps.repos.audit.listByAction({ projectId, action: "VALIDATE" }),
     ]);
+
+    // Planejamento, linha de base e datas reais: os gravados na fase, como na EAP.
+    const phases = phaseRows;
 
     const today = civilDayKey(now);
     const isPast = (value: Date | null) => value !== null && civilDayKey(value) < today;
@@ -59,6 +62,15 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
         actualStartAt: iso(phase.actualStartAt),
         actualEndAt: iso(phase.actualEndAt),
         overdue: phase.status !== "CONCLUIDA" && isPast(phase.plannedEndAt),
+        deadlinePerformance: deadlinePerformance(
+          {
+            state: phase.status === "CONCLUIDA" ? "DONE" : "OPEN",
+            baselineEndAt: phase.baselineEndAt,
+            plannedEndAt: phase.plannedEndAt,
+            actualEndAt: phase.actualEndAt,
+          },
+          now,
+        ),
         rescheduleCount: countFor("PHASE", phase.id),
         responsibleId: phase.responsibleId,
         responsibleName: null,
@@ -79,6 +91,15 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
           actualStartAt: iso(task.actualStartAt),
           actualEndAt: iso(task.actualEndAt),
           overdue: status !== "CONCLUIDA" && status !== "CANCELADA" && isPast(task.plannedEndAt),
+          deadlinePerformance: deadlinePerformance(
+            {
+              state: status === "CONCLUIDA" ? "DONE" : status === "CANCELADA" ? "CLOSED" : "OPEN",
+              baselineEndAt: task.baselineEndAt,
+              plannedEndAt: task.plannedEndAt,
+              actualEndAt: task.actualEndAt,
+            },
+            now,
+          ),
           rescheduleCount: countFor("TASK", task.id),
           responsibleId: task.assigneeId,
           responsibleName: null,
@@ -98,9 +119,18 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
         actualStartAt: null,
         actualEndAt: iso(milestone.actualAt),
         overdue: milestone.status !== "APROVADO" && isPast(milestone.plannedAt),
+        deadlinePerformance: deadlinePerformance(
+          {
+            state: milestone.status === "APROVADO" ? "DONE" : "OPEN",
+            baselineEndAt: milestone.baselineAt,
+            plannedEndAt: milestone.plannedAt,
+            actualEndAt: milestone.actualAt,
+          },
+          now,
+        ),
         rescheduleCount: countFor("MILESTONE", milestone.id),
         responsibleId:
-          milestone.status === "ENTREGUE" ? milestone.reviewerId : milestone.deliveredBy,
+          milestone.status === "ENTREGUE" ? milestone.reviewerId : (milestone.presenterId ?? milestone.deliveredBy),
         responsibleName: null,
       })),
     ];

@@ -3,14 +3,17 @@ import { UniqueConstraintError } from "../../../lib/postgres-errors";
 import type { AuthUser } from "../../../lib/session";
 import type { AddProjectMemberInput } from "../dtos/projects.dto";
 import { toProjectMemberDto } from "../dtos/projects.dto";
-import type { ProjectRepos } from "../repositories/contracts";
+import type { ProjectRepos, TransactionRunner } from "../repositories/contracts";
 import {
   assertCanManageMembers,
   duplicateMemberError,
   loadProjectAccess,
 } from "./shared";
 
-export function makeAddProjectMemberUseCase(deps: { repos: ProjectRepos }) {
+export function makeAddProjectMemberUseCase(deps: {
+  repos: ProjectRepos;
+  runInTransaction: TransactionRunner;
+}) {
   return async function addProjectMember(
     actor: AuthUser,
     projectId: string,
@@ -35,11 +38,30 @@ export function makeAddProjectMemberUseCase(deps: { repos: ProjectRepos }) {
     }
 
     try {
-      const created = await deps.repos.members.create({
-        id: crypto.randomUUID(),
-        projectId,
-        userId: input.userId,
-        role: input.role,
+      const created = await deps.runInTransaction(async (txRepos) => {
+        const row = await txRepos.members.create({
+          id: crypto.randomUUID(),
+          projectId,
+          userId: input.userId,
+          role: input.role,
+        });
+
+        await txRepos.audit.create({
+          projectId,
+          entityType: "PROJECT_MEMBER",
+          entityId: row.id,
+          action: "MEMBER_ADD",
+          summary: `${memberUser.name} incluído(a) no projeto como ${row.role}.`,
+          payload: {
+            memberId: row.id,
+            userId: row.userId,
+            userName: memberUser.name,
+            role: row.role,
+          },
+          actorId: actor.id,
+        });
+
+        return row;
       });
 
       return toProjectMemberDto(created, memberUser);

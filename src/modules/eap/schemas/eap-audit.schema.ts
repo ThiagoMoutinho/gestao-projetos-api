@@ -3,7 +3,13 @@ import { z } from "zod";
 import { eapAuditActionEnum } from "../../../db/schema";
 import { errorResponseSchema } from "../../../lib/http-error";
 
-export const eapAuditEntityTypeSchema = z.enum(["PHASE", "TASK", "MILESTONE"]);
+export const eapAuditEntityTypeSchema = z.enum([
+  "PHASE",
+  "TASK",
+  "MILESTONE",
+  "PROJECT",
+  "PROJECT_MEMBER",
+]);
 
 export type EapAuditEntityType = z.infer<typeof eapAuditEntityTypeSchema>;
 
@@ -21,6 +27,9 @@ export const eapAuditEventKindSchema = z.enum([
   "AUTOMATIC_STATUS",
   "STATUS",
   "PROGRESS",
+  "COMPLETION",
+  "REOPENING",
+  "ACTUAL_DATES",
   "IMPEDIMENT_OPENED",
   "IMPEDIMENT_UPDATED",
   "IMPEDIMENT_RESOLVED",
@@ -38,6 +47,10 @@ export const eapAuditEventKindSchema = z.enum([
   "DELETION",
   "REORDER",
   "EVIDENCE",
+  "MEMBER_ADDED",
+  "MEMBER_ROLE_CHANGED",
+  "MEMBER_REMOVED",
+  "OWNER_TRANSFERRED",
   "OTHER",
 ]);
 
@@ -60,6 +73,19 @@ export const eapAuditDetailsSchema = z.object({
   previousReason: z.string().nullable(),
   resolutionNote: z.string().nullable(),
   openMinutes: z.number().nullable(),
+  memberName: z.string().nullable(),
+  fromRole: z.string().nullable(),
+  toRole: z.string().nullable(),
+  fromOwnerName: z.string().nullable(),
+  toOwnerName: z.string().nullable(),
+  actualDates: z.array(
+    z.object({
+      field: z.enum(["START", "END"]),
+      previous: z.string().nullable(),
+      next: z.string().nullable(),
+    }),
+  ),
+  correction: z.boolean(),
 });
 
 export const eapAuditEntrySchema = z.object({

@@ -36,8 +36,7 @@ describe("ListTasks e GetTask", () => {
       "project-1",
       {
         name: "Fase 1",
-        plannedStartAt: "2026-06-01T15:00:00.000Z",
-        plannedEndAt: "2026-06-30T15:00:00.000Z",
+
       },
     );
     const listTasks = makeListTasksUseCase({ repos });
@@ -75,8 +74,8 @@ describe("ListTasks e GetTask", () => {
     const listTasks = makeListTasksUseCase({ repos });
     const getTask = makeGetTaskUseCase({ repos });
 
-    const phaseA = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase A" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
-    const phaseB = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Fase B" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    const phaseA = await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase A" });
+    const phaseB = await createPhase(actor("PMO", "pmo-1"), "project-2", { name: "Fase B" });
     await createTask(actor("PMO", "pmo-1"), "project-1", phaseA.id, { title: "Tarefa 1" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
     const otherTask = await createTask(actor("PMO", "pmo-1"), "project-2", phaseB.id, {
       title: "Tarefa outra",

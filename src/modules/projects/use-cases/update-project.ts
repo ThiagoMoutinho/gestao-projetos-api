@@ -8,6 +8,8 @@ import {
   assertCanUpdate,
   loadProjectAccess,
   ownerNotFoundError,
+  recordOwnerTransfer,
+  recordProjectStatusChange,
 } from "./shared";
 
 export function makeUpdateProjectUseCase(deps: {
@@ -27,6 +29,9 @@ export function makeUpdateProjectUseCase(deps: {
     assertCanUpdate(context);
 
     const ownerIdChanged = Boolean(input.ownerId && input.ownerId !== project.ownerId);
+    const statusChanged = input.status !== undefined && input.status !== project.status;
+    let ownerTransfer: { from: { id: string; name: string | null }; to: { id: string; name: string } } | null =
+      null;
 
     if (ownerIdChanged) {
       if (!canTransferOwnership(context)) {
@@ -41,6 +46,12 @@ export function makeUpdateProjectUseCase(deps: {
       if (!nextOwner) {
         throw ownerNotFoundError();
       }
+
+      const previousOwner = await deps.repos.users.findById(project.ownerId);
+      ownerTransfer = {
+        from: { id: project.ownerId, name: previousOwner?.name ?? null },
+        to: { id: nextOwner.id, name: nextOwner.name },
+      };
     }
 
     const updated = await deps.runInTransaction(async (txRepos) => {
@@ -62,6 +73,19 @@ export function makeUpdateProjectUseCase(deps: {
       if (ownerIdChanged && input.ownerId) {
         await txRepos.members.ensureOwnerMembership(projectId, input.ownerId);
         await txRepos.members.deleteOwnerRole(projectId, project.ownerId);
+      }
+
+      if (ownerTransfer) {
+        await recordOwnerTransfer(txRepos, { projectId, ...ownerTransfer, actorId: actor.id });
+      }
+
+      if (statusChanged) {
+        await recordProjectStatusChange(txRepos, {
+          projectId,
+          from: project.status,
+          to: row.status,
+          actorId: actor.id,
+        });
       }
 
       return row;

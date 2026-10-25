@@ -84,7 +84,7 @@ function setup() {
 
 async function withMilestone(type: "ENTREGA" | "APROVACAO" = "ENTREGA") {
   const ctx = setup();
-  const phase = await ctx.createPhase(pmo, "project-1", { name: "Fase 1" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+  const phase = await ctx.createPhase(pmo, "project-1", { name: "Fase 1" });
   const milestone = await ctx.createMilestone(pmo, "project-1", phase.id, {
     title: "Pacote técnico",
     type,
@@ -107,7 +107,10 @@ describe("homologação de marcos", () => {
 
     const delivered = await call((p, m) => ctx.deliverMilestone(supplier, "project-1", p, m, { note: "Versão 1" }));
     assert.equal(delivered.status, "ENTREGUE");
-    assert.equal((await ctx.listPhases(pmo, "project-1")).data[0].progressBasisPoints, 0);
+    // Entregue conta 50% no andamento; a fase não conclui sem o aceite.
+    const afterDelivery = (await ctx.listPhases(pmo, "project-1")).data[0];
+    assert.equal(afterDelivery.progressBasisPoints, 5000);
+    assert.notEqual(afterDelivery.calculatedStatus, "CONCLUIDA");
 
     await assert.rejects(
       () => call((p, m) => ctx.reviewMilestone(pmo, "project-1", p, m, { decision: "APROVADO" })),

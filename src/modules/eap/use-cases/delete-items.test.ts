@@ -42,7 +42,7 @@ async function setup() {
   });
   const repos = makeEapInMemoryRepos(store);
   const deps = { repos, runInTransaction: makeEapInMemoryTransactionRunner(repos, store) };
-  const phase = await makeCreatePhaseUseCase(deps)(pmo, "project-1", { name: "Fase 1" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+  const phase = await makeCreatePhaseUseCase(deps)(pmo, "project-1", { name: "Fase 1" });
 
   return {
     store,
@@ -65,8 +65,7 @@ describe("Exclusão de itens da EAP", () => {
     await ctx.deleteTask(pmo, "project-1", ctx.phase.id, task.id);
 
     assert.equal(ctx.store.tasks.length, 0);
-    const log = ctx.store.auditLogs.at(-1);
-    assert.equal(log?.action, "DELETE");
+    const log = ctx.store.auditLogs.findLast((entry) => entry.action === "DELETE");
     assert.equal(log?.entityType, "TASK");
     assert.equal(log?.entityId, task.id);
     assert.equal((log?.payload as { title?: string }).title, "Criada por engano");

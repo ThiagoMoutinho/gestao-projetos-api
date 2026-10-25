@@ -6,12 +6,10 @@ import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import {
   assertCanCreateItems,
   assertCanView,
-  assertRequiredPlannedRange,
   assertValidAssignee,
   duplicateSortOrderError,
   loadProjectAccess,
   normalizeOptionalText,
-  parseOptionalDate,
 } from "./shared";
 
 export function makeCreatePhaseUseCase(deps: {
@@ -26,10 +24,6 @@ export function makeCreatePhaseUseCase(deps: {
     const { project, context } = await loadProjectAccess(deps.repos, actor, projectId);
     assertCanView(context);
     assertCanCreateItems(context);
-
-    const plannedStartAt = parseOptionalDate(input.plannedStartAt);
-    const plannedEndAt = parseOptionalDate(input.plannedEndAt);
-    assertRequiredPlannedRange(plannedStartAt, plannedEndAt);
 
     const responsibleId = input.responsibleId ?? null;
     await assertValidAssignee(
@@ -56,10 +50,11 @@ export function makeCreatePhaseUseCase(deps: {
           status: "NAO_INICIADA",
           responsibleId,
           completionCriteria,
-          plannedStartAt,
-          plannedEndAt,
-          baselineStartAt: plannedStartAt,
-          baselineEndAt: plannedEndAt,
+          // As datas da fase são calculadas pelas tarefas e marcos (syncPhaseStatus).
+          plannedStartAt: null,
+          plannedEndAt: null,
+          baselineStartAt: null,
+          baselineEndAt: null,
           createdBy: actor.id,
           updatedBy: actor.id,
         });
@@ -75,10 +70,6 @@ export function makeCreatePhaseUseCase(deps: {
             sortOrder: phase.sortOrder,
             responsibleId: phase.responsibleId,
             completionCriteria: phase.completionCriteria,
-            plannedStartAt: phase.plannedStartAt?.toISOString() ?? null,
-            plannedEndAt: phase.plannedEndAt?.toISOString() ?? null,
-            baselineStartAt: phase.baselineStartAt?.toISOString() ?? null,
-            baselineEndAt: phase.baselineEndAt?.toISOString() ?? null,
           },
           actorId: actor.id,
         });
@@ -89,6 +80,7 @@ export function makeCreatePhaseUseCase(deps: {
       return toEapPhaseDto(created, {
         calculatedStatus: "NAO_INICIADA",
         progress: { state: "EMPTY", basisPoints: null },
+        dates: { plannedStartAt: null, plannedEndAt: null, actualStartAt: null, actualEndAt: null },
       });
     } catch (error) {
       if (error instanceof UniqueConstraintError) {

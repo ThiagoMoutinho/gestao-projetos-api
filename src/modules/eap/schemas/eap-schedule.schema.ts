@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { errorResponseSchema } from "../../../lib/http-error";
+import { DEADLINE_PERFORMANCES, type DeadlinePerformance } from "../use-cases/eap-status";
 
 const isoDateTimeSchema = z
   .string()
@@ -22,6 +23,10 @@ export const rescheduleRangeBodySchema = z
     plannedStartAt: isoDateTimeSchema,
     plannedEndAt: isoDateTimeSchema,
     justification: justificationSchema,
+    extendPhase: z
+      .boolean()
+      .optional()
+      .describe("Estende o planejamento da fase para cobrir o item, com a mesma justificativa (ajuste em cascata)."),
   })
   .strict();
 
@@ -29,6 +34,10 @@ export const rescheduleMilestoneBodySchema = z
   .object({
     plannedAt: isoDateTimeSchema,
     justification: justificationSchema,
+    extendPhase: z
+      .boolean()
+      .optional()
+      .describe("Estende o planejamento da fase para cobrir o item, com a mesma justificativa (ajuste em cascata)."),
   })
   .strict();
 
@@ -109,6 +118,10 @@ const monitoredItemSchema = z.object({
   actualStartAt: z.string().nullable(),
   actualEndAt: z.string().nullable(),
   overdue: z.boolean(),
+  deadlinePerformance: z
+    .enum(DEADLINE_PERFORMANCES as [DeadlinePerformance, ...DeadlinePerformance[]])
+    .nullable()
+    .describe("Cumprimento de prazo em relação ao planejamento original e ao vigente."),
   rescheduleCount: z.number().int(),
   responsibleId: z.string().nullable(),
   responsibleName: z.string().nullable(),

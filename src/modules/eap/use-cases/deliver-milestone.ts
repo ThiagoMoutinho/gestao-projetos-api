@@ -38,7 +38,7 @@ export function makeDeliverMilestoneUseCase(deps: {
     assertCanView(context);
     await loadPhaseInProject(deps.repos, projectId, phaseId);
     const current = await loadMilestoneInPhase(deps.repos, phaseId, milestoneId);
-    assertCanDeliverMilestone(context);
+    assertCanDeliverMilestone(context, current);
 
     if (!usesDeliveryRounds(current.type)) {
       throw new HttpError(

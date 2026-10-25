@@ -53,8 +53,8 @@ describe("ListPhases e GetPhase", () => {
     const createPhase = makeCreatePhaseUseCase({ repos, runInTransaction: runner });
     const listPhases = makeListPhasesUseCase({ repos });
 
-    await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase A" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
-    await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase B" , plannedStartAt: "2026-06-01T15:00:00.000Z", plannedEndAt: "2026-06-30T15:00:00.000Z"});
+    await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase A" });
+    await createPhase(actor("PMO", "pmo-1"), "project-1", { name: "Fase B" });
 
     const result = await listPhases(actor("PMO", "pmo-1"), "project-1");
     assert.deepEqual(

@@ -37,11 +37,29 @@ export const milestoneParamsSchema = z.object({
 
 export const createMilestoneBodySchema = z
   .object({
-    title: z.string().trim().min(1).max(255),
-    description: z.string().trim().max(4000).nullable().optional(),
+    title: z.string().trim().min(1, "Informe o nome do marco.").max(255),
+    description: z.string("Informe a descrição do marco.").trim().min(1, "Informe a descrição do marco.").max(4000),
     type: eapMilestoneTypeSchema,
-    plannedAt: requiredIsoDateTime("Informe a data planejada."),
-    reviewerId: z.string().min(1).nullable().optional(),
+    plannedAt: requiredIsoDateTime("Informe a data prevista do marco."),
+    reviewerId: z
+      .string("Designe o homologador do marco.")
+      .min(1, "Designe o homologador do marco.")
+      .describe("Gestor validador, obrigatório na criação: participante do projeto que não atua como fornecedor."),
+    presenterId: z
+      .string("Designe quem vai apresentar o marco ao gestor.")
+      .min(1, "Designe quem vai apresentar o marco ao gestor.")
+      .describe("Pessoa designada para apresentar o marco ao gestor validador: participante do projeto, diferente do validador."),
+    extendPhase: z
+      .boolean()
+      .optional()
+      .describe("Estende o planejamento da fase para cobrir a data do marco (ajuste em cascata; exige permissão de reprogramar)."),
+    justification: z
+      .string()
+      .trim()
+      .max(2000)
+      .nullable()
+      .optional()
+      .describe("Justificativa do ajuste em cascata, obrigatória (mín. 10 caracteres) quando estender um prazo já definido da fase."),
   })
   .strict();
 
@@ -50,6 +68,7 @@ export const updateMilestoneBodySchema = z
     title: z.string().trim().min(1).max(255).optional(),
     description: z.string().trim().max(4000).nullable().optional(),
     reviewerId: z.string().min(1).nullable().optional(),
+    presenterId: z.string().min(1).optional().describe("Novo apresentador do marco; não pode ser removido."),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {
@@ -113,6 +132,7 @@ export const eapMilestoneSchema = z.object({
   validationNote: z.string().nullable(),
   validatedAt: z.string().nullable(),
   reviewerId: z.string().nullable(),
+  presenterId: z.string().nullable(),
   createdBy: z.string(),
   updatedBy: z.string(),
   createdAt: z.string(),

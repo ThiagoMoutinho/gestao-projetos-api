@@ -11,13 +11,6 @@ export const eapPhaseStatusSchema = z.enum([
 
 export type EapPhaseStatus = z.infer<typeof eapPhaseStatusSchema>;
 
-function requiredIsoDateTime(message: string) {
-  return z
-    .string(message)
-    .min(1, message)
-    .refine((value) => !Number.isNaN(Date.parse(value)), "Data inválida.");
-}
-
 export const projectIdParamsSchema = z.object({
   id: z.string().min(1),
 });
@@ -32,12 +25,21 @@ export const createPhaseBodySchema = z
     name: z.string().trim().min(1).max(255),
     description: z.string().trim().max(4000).nullable().optional(),
     sortOrder: z.number().int().min(0).optional(),
-    plannedStartAt: requiredIsoDateTime("Informe o início planejado."),
-    plannedEndAt: requiredIsoDateTime("Informe o término planejado."),
-    responsibleId: z.string().min(1).nullable().optional(),
+    responsibleId: z
+      .string("Designe o responsável pela fase.")
+      .min(1, "Designe o responsável pela fase.")
+      .describe("Responsável pela fase, obrigatório na criação: participante do projeto."),
     completionCriteria: z.string().trim().max(4000).nullable().optional(),
   })
-  .strict();
+  .strict()
+  .describe("As datas da fase não são informadas: são calculadas pelas tarefas e marcos vinculados.");
+
+const isoDateTimeSchema = z
+  .string()
+  .min(1)
+  .refine((value) => !Number.isNaN(Date.parse(value)), {
+    message: "Data inválida.",
+  });
 
 export const updatePhaseBodySchema = z
   .object({
@@ -47,8 +49,23 @@ export const updatePhaseBodySchema = z
       .boolean()
       .optional()
       .describe("Suspende ou retoma a fase. A situação de execução é calculada a partir das tarefas e marcos."),
+    justification: z
+      .string()
+      .trim()
+      .max(2000)
+      .nullable()
+      .optional()
+      .describe("Obrigatória (mín. 10 caracteres) para suspender a fase ou corrigir suas datas reais."),
     responsibleId: z.string().min(1).nullable().optional(),
     completionCriteria: z.string().trim().max(4000).nullable().optional(),
+    actualStartAt: isoDateTimeSchema
+      .nullable()
+      .optional()
+      .describe("Correção explícita do início real registrado (gestão do projeto, PMO ou administração)."),
+    actualEndAt: isoDateTimeSchema
+      .nullable()
+      .optional()
+      .describe("Correção explícita do término real registrado; só para fase concluída."),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {
@@ -81,8 +98,24 @@ export const eapPhaseSchema = z.object({
   baselineEndAt: z.string().nullable(),
   plannedStartAt: z.string().nullable(),
   plannedEndAt: z.string().nullable(),
-  actualStartAt: z.string().nullable(),
-  actualEndAt: z.string().nullable(),
+  consolidatedStartAt: z
+    .string()
+    .nullable()
+    .describe("Início indicado pelos itens (menor início planejado das tarefas). Não substitui o planejamento da fase."),
+  consolidatedEndAt: z
+    .string()
+    .nullable()
+    .describe("Término indicado pelos itens (maior término entre tarefas e marcos). Não substitui o planejamento da fase."),
+  actualStartAt: z.string().nullable().describe("Início real registrado na fase."),
+  actualEndAt: z.string().nullable().describe("Término real registrado na fase."),
+  consolidatedActualStartAt: z
+    .string()
+    .nullable()
+    .describe("Início real indicado pelos itens (menor início real das tarefas). Não substitui o registro da fase."),
+  consolidatedActualEndAt: z
+    .string()
+    .nullable()
+    .describe("Término real indicado pelos itens, só com a fase concluída. Não substitui o registro da fase."),
   calculatedStatus: eapPhaseStatusSchema.describe(
     "Situação pela regra da EAP. Difere de status apenas em registros antigos ainda não reconciliados.",
   ),

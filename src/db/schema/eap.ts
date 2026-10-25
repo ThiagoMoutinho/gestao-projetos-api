@@ -81,6 +81,10 @@ export const eapAuditActionEnum = pgEnum("eap_audit_action", [
   "IMPEDE",
   "CLEAR_IMPEDIMENT",
   "DELETE",
+  "MEMBER_ADD",
+  "MEMBER_UPDATE",
+  "MEMBER_REMOVE",
+  "OWNER_TRANSFER",
 ]);
 
 const exclusiveScheduleTargetChk = (
@@ -251,7 +255,10 @@ export const eapMilestones = pgTable(
     validatedBy: text("validated_by").references(() => user.id),
     validationNote: text("validation_note"),
     validatedAt: timestamp("validated_at"),
+    /** Gestor validador: aceita ou rejeita o marco. */
     reviewerId: text("reviewer_id").references(() => user.id),
+    /** Pessoa designada para apresentar o marco ao gestor validador. */
+    presenterId: text("presenter_id").references(() => user.id),
     createdBy: text("created_by")
       .notNull()
       .references(() => user.id),
@@ -271,6 +278,7 @@ export const eapMilestones = pgTable(
     index("eap_milestones_status_planned_at_idx").on(table.status, table.plannedAt),
     index("eap_milestones_delivered_by_idx").on(table.deliveredBy),
     index("eap_milestones_reviewer_id_idx").on(table.reviewerId),
+    index("eap_milestones_presenter_id_idx").on(table.presenterId),
   ],
 );
 
@@ -642,6 +650,11 @@ export const eapMilestonesRelations = relations(eapMilestones, ({ one, many }) =
     fields: [eapMilestones.reviewerId],
     references: [user.id],
     relationName: "eap_milestones_reviewer",
+  }),
+  presenter: one(user, {
+    fields: [eapMilestones.presenterId],
+    references: [user.id],
+    relationName: "eap_milestones_presenter",
   }),
   deliveries: many(eapMilestoneDeliveries),
   evidences: many(eapEvidences),

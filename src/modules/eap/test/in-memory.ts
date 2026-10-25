@@ -72,6 +72,7 @@ export function createEapInMemoryStore(
     users: seed?.users ?? [],
     projects: seed?.projects ?? [],
     members: seed?.members ?? [],
+    audit: seed?.audit ?? [],
     phases: seed?.phases ?? [],
     tasks: seed?.tasks ?? [],
     milestones: seed?.milestones ?? [],
@@ -392,6 +393,7 @@ class InMemoryEapMilestonesRepository implements EapMilestonesRepository {
     const now = new Date();
     const row: EapMilestoneRow = {
       ...data,
+      presenterId: data.presenterId ?? null,
       actualAt: null,
       deliveredBy: null,
       validatedBy: null,
@@ -777,6 +779,7 @@ function cloneStore(store: EapInMemoryStore): EapInMemoryStore {
     users: store.users.map((row) => ({ ...row })),
     projects: store.projects.map((row) => ({ ...row })),
     members: store.members.map((row) => ({ ...row })),
+    audit: store.audit.map((row) => ({ ...row })),
     phases: store.phases.map((row) => ({ ...row })),
     tasks: store.tasks.map((row) => ({ ...row })),
     milestones: store.milestones.map((row) => ({ ...row })),
@@ -792,6 +795,7 @@ function restoreStore(store: EapInMemoryStore, snapshot: EapInMemoryStore) {
   store.users.splice(0, store.users.length, ...snapshot.users);
   store.projects.splice(0, store.projects.length, ...snapshot.projects);
   store.members.splice(0, store.members.length, ...snapshot.members);
+  store.audit.splice(0, store.audit.length, ...snapshot.audit);
   store.phases.splice(0, store.phases.length, ...snapshot.phases);
   store.tasks.splice(0, store.tasks.length, ...snapshot.tasks);
   store.milestones.splice(0, store.milestones.length, ...snapshot.milestones);

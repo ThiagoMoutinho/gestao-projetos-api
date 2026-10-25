@@ -1,10 +1,13 @@
 import { HttpError } from "../../../lib/http-error";
 import type { AuthUser } from "../../../lib/session";
 import { isProtectedOwnerMembership } from "../projects.authorization";
-import type { ProjectRepos } from "../repositories/contracts";
+import type { ProjectRepos, TransactionRunner } from "../repositories/contracts";
 import { assertCanManageMembers, loadProjectAccess } from "./shared";
 
-export function makeRemoveProjectMemberUseCase(deps: { repos: ProjectRepos }) {
+export function makeRemoveProjectMemberUseCase(deps: {
+  repos: ProjectRepos;
+  runInTransaction: TransactionRunner;
+}) {
   return async function removeProjectMember(
     actor: AuthUser,
     projectId: string,
@@ -34,6 +37,25 @@ export function makeRemoveProjectMemberUseCase(deps: { repos: ProjectRepos }) {
       );
     }
 
-    await deps.repos.members.deleteById(memberId);
+    const memberUser = await deps.repos.users.findById(member.userId);
+
+    await deps.runInTransaction(async (txRepos) => {
+      await txRepos.members.deleteById(memberId);
+
+      await txRepos.audit.create({
+        projectId,
+        entityType: "PROJECT_MEMBER",
+        entityId: member.id,
+        action: "MEMBER_REMOVE",
+        summary: `${memberUser?.name ?? "Participante"} removido(a) da função ${member.role} no projeto.`,
+        payload: {
+          memberId: member.id,
+          userId: member.userId,
+          userName: memberUser?.name ?? null,
+          role: member.role,
+        },
+        actorId: actor.id,
+      });
+    });
   };
 }

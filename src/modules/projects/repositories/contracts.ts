@@ -79,10 +79,33 @@ export interface UsersRepository {
   findById(id: string): Promise<UserRow | null>;
 }
 
+export type ProjectAuditAction =
+  | "STATUS_CHANGE"
+  | "MEMBER_ADD"
+  | "MEMBER_UPDATE"
+  | "MEMBER_REMOVE"
+  | "OWNER_TRANSFER";
+
+/** Registro de auditoria do projeto, gravado na mesma trilha imutável da EAP. */
+export type NewProjectAuditRecord = {
+  projectId: string;
+  entityType: "PROJECT" | "PROJECT_MEMBER";
+  entityId: string;
+  action: ProjectAuditAction;
+  summary: string;
+  payload: Record<string, unknown>;
+  actorId: string;
+};
+
+export interface ProjectAuditRepository {
+  create(data: NewProjectAuditRecord): Promise<void>;
+}
+
 export type ProjectRepos = {
   projects: ProjectsRepository;
   members: ProjectMembersRepository;
   users: UsersRepository;
+  audit: ProjectAuditRepository;
 };
 
 export type TransactionRunner = <T>(

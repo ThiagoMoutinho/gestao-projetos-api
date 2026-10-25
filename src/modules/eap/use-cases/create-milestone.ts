@@ -3,10 +3,13 @@ import type { CreateMilestoneInput } from "../dtos/eap-milestones.dto";
 import { toEapMilestoneDto } from "../dtos/eap-milestones.dto";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import { syncPhaseStatus } from "./phase-rollup";
+import { extendPhaseToCover } from "./reschedule";
 import {
   assertCanCreateItems,
+  assertCanRescheduleEap,
   assertCanView,
   assertRequiredPlannedDate,
+  assertValidMilestonePresenter,
   assertValidMilestoneReviewer,
   loadPhaseInProject,
   loadProjectAccess,
@@ -23,11 +26,21 @@ export function makeCreateMilestoneUseCase(deps: {
     phaseId: string,
     input: CreateMilestoneInput,
   ) {
-    const { context } = await loadProjectAccess(deps.repos, actor, projectId);
+    const { project, context } = await loadProjectAccess(deps.repos, actor, projectId);
     assertCanView(context);
     assertCanCreateItems(context);
+    if (input.extendPhase) {
+      assertCanRescheduleEap(context);
+    }
     await loadPhaseInProject(deps.repos, projectId, phaseId);
     await assertValidMilestoneReviewer(deps.repos, context, projectId, input.reviewerId);
+    await assertValidMilestonePresenter(
+      deps.repos,
+      context,
+      projectId,
+      input.presenterId ?? undefined,
+      input.reviewerId ?? null,
+    );
 
     const plannedAt = parseOptionalDate(input.plannedAt);
     assertRequiredPlannedDate(plannedAt);
@@ -48,6 +61,7 @@ export function makeCreateMilestoneUseCase(deps: {
         plannedAt,
         baselineAt: plannedAt,
         reviewerId: input.reviewerId ?? null,
+        presenterId: input.presenterId ?? null,
         createdBy: actor.id,
         updatedBy: actor.id,
       });
@@ -65,9 +79,19 @@ export function makeCreateMilestoneUseCase(deps: {
           plannedAt: milestone.plannedAt?.toISOString() ?? null,
           baselineAt: milestone.baselineAt?.toISOString() ?? null,
           reviewerId: milestone.reviewerId,
+          presenterId: milestone.presenterId,
         },
         actorId: actor.id,
       });
+
+      if (input.extendPhase) {
+        await extendPhaseToCover(txRepos, project, actor, {
+          phaseId,
+          item: { startAt: null, endAt: plannedAt },
+          itemLabel: `o marco "${milestone.title}"`,
+          justification: input.justification?.trim() || null,
+        });
+      }
 
       await syncPhaseStatus(txRepos, {
         projectId,

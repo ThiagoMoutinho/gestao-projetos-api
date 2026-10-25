@@ -69,3 +69,42 @@ export const duplicateMemberError = () =>
 
 export const ownerNotFoundError = () =>
   new HttpError(404, "Dono do projeto não encontrado.", "OWNER_NOT_FOUND");
+
+type UserRef = { id: string; name: string | null };
+
+/** Registra a troca de titularidade com o dono anterior e o novo. */
+export async function recordOwnerTransfer(
+  repos: ProjectRepos,
+  data: { projectId: string; from: UserRef; to: UserRef; actorId: string },
+) {
+  await repos.audit.create({
+    projectId: data.projectId,
+    entityType: "PROJECT",
+    entityId: data.projectId,
+    action: "OWNER_TRANSFER",
+    summary: `Titularidade do projeto transferida de ${data.from.name ?? "dono anterior"} para ${data.to.name ?? "novo dono"}.`,
+    payload: {
+      fromOwnerId: data.from.id,
+      fromOwnerName: data.from.name,
+      toOwnerId: data.to.id,
+      toOwnerName: data.to.name,
+    },
+    actorId: data.actorId,
+  });
+}
+
+/** Registra a alteração manual da situação do projeto. */
+export async function recordProjectStatusChange(
+  repos: ProjectRepos,
+  data: { projectId: string; from: string; to: string; actorId: string },
+) {
+  await repos.audit.create({
+    projectId: data.projectId,
+    entityType: "PROJECT",
+    entityId: data.projectId,
+    action: "STATUS_CHANGE",
+    summary: `Situação do projeto alterada de ${data.from} para ${data.to}.`,
+    payload: { automatic: false, from: data.from, to: data.to },
+    actorId: data.actorId,
+  });
+}
