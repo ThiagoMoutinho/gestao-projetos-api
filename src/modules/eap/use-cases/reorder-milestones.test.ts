@@ -29,7 +29,11 @@ describe("ReorderMilestones", () => {
     const phase = await makeCreatePhaseUseCase({ repos, runInTransaction: runner })(
       actor("PMO"),
       "project-1",
-      { name: "Fase" },
+      {
+        name: "Fase",
+        plannedStartAt: "2026-06-01T15:00:00.000Z",
+        plannedEndAt: "2026-06-30T15:00:00.000Z",
+      },
     );
     const createMilestone = makeCreateMilestoneUseCase({ repos, runInTransaction: runner });
     const reorder = makeReorderMilestonesUseCase({ repos, runInTransaction: runner });
@@ -69,7 +73,11 @@ describe("ReorderMilestones", () => {
     const phase = await makeCreatePhaseUseCase({ repos, runInTransaction: runner })(
       actor("PMO"),
       "project-1",
-      { name: "Fase" },
+      {
+        name: "Fase",
+        plannedStartAt: "2026-06-01T15:00:00.000Z",
+        plannedEndAt: "2026-06-30T15:00:00.000Z",
+      },
     );
     const createMilestone = makeCreateMilestoneUseCase({ repos, runInTransaction: runner });
     const reorder = makeReorderMilestonesUseCase({ repos, runInTransaction: runner });

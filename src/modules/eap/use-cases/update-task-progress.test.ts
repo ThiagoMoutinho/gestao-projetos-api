@@ -49,13 +49,22 @@ describe("UpdateTaskProgress", () => {
     const phase = await makeCreatePhaseUseCase({ repos, runInTransaction: runner })(
       actor("PMO", "pmo-1"),
       "project-1",
-      { name: "Fase 1" },
+      {
+        name: "Fase 1",
+        plannedStartAt: "2026-06-01T15:00:00.000Z",
+        plannedEndAt: "2026-06-30T15:00:00.000Z",
+      },
     );
     const task = await makeCreateTaskUseCase({ repos, runInTransaction: runner })(
       actor("PMO", "pmo-1"),
       "project-1",
       phase.id,
-      { title: "Implementar API", assigneeId: "forn-1" },
+      {
+        title: "Implementar API",
+        assigneeId: "forn-1",
+        plannedStartAt: "2026-06-01T15:00:00.000Z",
+        plannedEndAt: "2026-06-30T15:00:00.000Z",
+      },
     );
     const updateProgress = makeUpdateTaskProgressUseCase({
       repos,
@@ -103,7 +112,11 @@ describe("UpdateTaskProgress", () => {
     const phase = await makeCreatePhaseUseCase({ repos, runInTransaction: runner })(
       actor("PMO", "pmo-1"),
       "project-1",
-      { name: "Fase 1" },
+      {
+        name: "Fase 1",
+        plannedStartAt: "2026-06-01T15:00:00.000Z",
+        plannedEndAt: "2026-06-30T15:00:00.000Z",
+      },
     );
     const task = await makeCreateTaskUseCase({ repos, runInTransaction: runner })(
       actor("PMO", "pmo-1"),

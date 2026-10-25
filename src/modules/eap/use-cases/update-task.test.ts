@@ -35,7 +35,11 @@ describe("UpdateTask", () => {
     const phase = await makeCreatePhaseUseCase({ repos, runInTransaction: runner })(
       actor("PMO", "pmo-1"),
       "project-1",
-      { name: "Fase 1" },
+      {
+        name: "Fase 1",
+        plannedStartAt: "2026-06-01T15:00:00.000Z",
+        plannedEndAt: "2026-06-30T15:00:00.000Z",
+      },
     );
     const created = await makeCreateTaskUseCase({ repos, runInTransaction: runner })(
       actor("PMO", "pmo-1"),
@@ -138,7 +142,11 @@ describe("UpdateTask", () => {
     const phase = await makeCreatePhaseUseCase({ repos, runInTransaction: runner })(
       actor("PMO", "pmo-1"),
       "project-1",
-      { name: "Fase 1" },
+      {
+        name: "Fase 1",
+        plannedStartAt: "2026-06-01T15:00:00.000Z",
+        plannedEndAt: "2026-06-30T15:00:00.000Z",
+      },
     );
     const createTask = makeCreateTaskUseCase({ repos, runInTransaction: runner });
     const updateTask = makeUpdateTaskUseCase({ repos, runInTransaction: runner });
@@ -201,13 +209,22 @@ describe("UpdateTask", () => {
     const phase = await makeCreatePhaseUseCase({ repos, runInTransaction: runner })(
       actor("PMO", "pmo-1"),
       "project-1",
-      { name: "Fase 1" },
+      {
+        name: "Fase 1",
+        plannedStartAt: "2026-06-01T15:00:00.000Z",
+        plannedEndAt: "2026-06-30T15:00:00.000Z",
+      },
     );
     const task = await makeCreateTaskUseCase({ repos, runInTransaction: runner })(
       actor("PMO", "pmo-1"),
       "project-1",
       phase.id,
-      { title: "Tarefa atribuída", assigneeId: "obs-1" },
+      {
+        title: "Tarefa atribuída",
+        assigneeId: "obs-1",
+        plannedStartAt: "2026-06-01T15:00:00.000Z",
+        plannedEndAt: "2026-06-30T15:00:00.000Z",
+      },
     );
     const assignee = actor("GESTOR", "obs-1");
 

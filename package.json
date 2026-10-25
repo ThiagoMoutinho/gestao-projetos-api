@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --watch src/index.ts",
-    "test": "tsx --test src/modules/projects/**/*.test.ts src/modules/eap/**/*.test.ts src/http/**/*.test.ts src/scripts/demo-seed/**/*.test.ts src/scripts/reconcile-eap-status/**/*.test.ts",
+    "test": "tsx --test src/modules/projects/**/*.test.ts src/modules/eap/**/*.test.ts src/scripts/demo-seed/**/*.test.ts src/scripts/reconcile-eap-status/**/*.test.ts",
+    "test:integration": "tsx --test src/http/**/*.test.ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

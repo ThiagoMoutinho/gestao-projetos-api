@@ -5,8 +5,19 @@
 
 # Backups do PostgreSQL
 *.dump
+*.pgdump
 *.backup
+*.bak
 *.sql.gz
+*.sql.zip
+backups/
+
+# Senhas, chaves e certificados
+*.password
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Dependências
 node_modules/
