@@ -28,3 +28,5 @@ tasks/
 
 # Senha local do usuário de teste. Não versionar.
 .local/
+# Instruções locais do Claude Code (não versionar)
+.claude/
