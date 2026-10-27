@@ -41,6 +41,7 @@ import { makeRegisterImpedimentUseCase } from "../use-cases/register-impediment"
 import { makeReorderMilestonesUseCase } from "../use-cases/reorder-milestones";
 import { makeReorderPhasesUseCase } from "../use-cases/reorder-phases";
 import { makeImportEapUseCase } from "../use-cases/import-eap";
+import { makeCloseProjectUseCase } from "../use-cases/close-project";
 import { makeReorderTasksUseCase } from "../use-cases/reorder-tasks";
 import { makeResolveImpedimentUseCase } from "../use-cases/resolve-impediment";
 import { makeReviewMilestoneUseCase } from "../use-cases/review-milestone";
@@ -82,6 +83,7 @@ export function makeEapModule(database: Database) {
     updatePhase: makeUpdatePhaseUseCase(deps),
     reorderPhases: makeReorderPhasesUseCase(deps),
     importEap: makeImportEapUseCase(deps),
+    closeProject: makeCloseProjectUseCase(deps),
     listTasks: makeListTasksUseCase(deps),
     getTask: makeGetTaskUseCase(deps),
     createTask: makeCreateTaskUseCase(deps),

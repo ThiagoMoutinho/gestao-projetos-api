@@ -30,6 +30,18 @@ export function makeUpdateProjectUseCase(deps: {
 
     const ownerIdChanged = Boolean(input.ownerId && input.ownerId !== project.ownerId);
     const statusChanged = input.status !== undefined && input.status !== project.status;
+    // Concluído só pelo encerramento formal (POST /projects/:id/closure), que confere a elegibilidade;
+    // depois de concluído, a situação não volta pela edição comum.
+    if (statusChanged && input.status === "CONCLUIDO") {
+      throw new HttpError(
+        400,
+        "Para concluir o projeto, use o encerramento formal, que confere se ele está apto.",
+        "PROJECT_CLOSURE_REQUIRES_FLOW",
+      );
+    }
+    if (statusChanged && project.status === "CONCLUIDO") {
+      throw new HttpError(409, "Projeto concluído não pode ter a situação alterada pela edição.", "PROJECT_ALREADY_CLOSED");
+    }
     let ownerTransfer: { from: { id: string; name: string | null }; to: { id: string; name: string } } | null =
       null;
 

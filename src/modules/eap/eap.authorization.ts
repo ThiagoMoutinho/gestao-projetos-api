@@ -175,6 +175,22 @@ export function canAuthorizeEapMilestoneResubmission(context: ProjectAccessConte
  * Reprogramar prazo é decisão de ADMIN, PMO ou da gestão do projeto (dono, DONO_PROJETO, GESTOR).
  * COORDENADOR e GESTOR global sem vínculo de gestão no projeto não reprogramam.
  */
+/** Encerramento formal: PMO, coordenação ou administração, ou a gestão responsável pelo projeto. Nunca fornecedor ou colaborador. */
+export function canCloseProject(context: ProjectAccessContext): boolean {
+  if (context.globalRole === "ADMIN" || context.globalRole === "PMO" || context.globalRole === "COORDENADOR") {
+    return true;
+  }
+
+  if (context.globalRole === "FORNECEDOR" || context.globalRole === "COLABORADOR") {
+    return false;
+  }
+
+  return (
+    isProjectOwner(context.userId, context.ownerId) ||
+    hasProjectManagementRole(context.memberRoles)
+  );
+}
+
 export function canRescheduleEap(context: ProjectAccessContext): boolean {
   if (context.globalRole === "ADMIN" || context.globalRole === "PMO") {
     return true;

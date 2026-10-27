@@ -132,6 +132,31 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
       (request) => controller.importEap(request),
     );
 
+    app.post(
+      "/projects/:id/closure",
+      {
+        schema: {
+          operationId: "closeProject",
+          tags: ["Projetos"],
+          summary: "Encerrar formalmente o projeto",
+          description:
+            "Conclui o projeto quando o backend confirma que está apto (fases concluídas, marcos aceitos, sem homologação pendente, não suspenso). Registra o encerramento no histórico.",
+          security: [{ cookieAuth: [] }],
+          params: projectIdParamsSchema,
+          response: {
+            200: z.object({
+              projectId: z.string(),
+              status: z.literal("CONCLUIDO"),
+              closedAt: z.string(),
+              closedBy: z.string(),
+            }),
+            ...errorResponses,
+          },
+        },
+      },
+      (request) => controller.closeProject(request),
+    );
+
     app.patch(
       "/projects/:id/phases/order",
       {

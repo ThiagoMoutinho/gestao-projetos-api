@@ -149,6 +149,17 @@ describe("Auditoria de status e titularidade do projeto", () => {
     assert.equal(store.audit.length, 0);
   });
 
+  it("a edição não conclui o projeto nem altera a situação de projeto concluído", async () => {
+    const { store, deps } = setup();
+    const updateProject = makeUpdateProjectUseCase(deps);
+    const rejects = (code: string) => (error: unknown) => error instanceof HttpError && error.code === code;
+
+    await assert.rejects(() => updateProject(actor("PMO"), "project-1", { status: "CONCLUIDO" }), rejects("PROJECT_CLOSURE_REQUIRES_FLOW"));
+    store.projects[0].status = "CONCLUIDO";
+    await assert.rejects(() => updateProject(actor("PMO"), "project-1", { status: "EM_EXECUCAO" }), rejects("PROJECT_ALREADY_CLOSED"));
+    assert.equal(store.audit.length, 0);
+  });
+
   it("registra a transferência de titularidade feita pela edição do projeto", async () => {
     const { store, deps } = setup();
     const updateProject = makeUpdateProjectUseCase(deps);
