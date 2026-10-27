@@ -7,6 +7,7 @@ import {
 } from "../dtos/eap-schedule.dto";
 import type { EapRepos } from "../repositories/contracts";
 import { calculatedTaskStatus, civilDayKey, deadlinePerformance } from "./eap-status";
+import { formalStatusHistory, projectSituation } from "./project-situation";
 import { assertCanView, loadProjectAccess, usesDeliveryRounds } from "./shared";
 
 type MonitoredItem = EapScheduleMonitoringDto["items"][number];
@@ -36,6 +37,12 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
       deps.repos.audit.listByAction({ projectId, action: "SCHEDULE_CHANGE" }),
       deps.repos.audit.listByAction({ projectId, action: "VALIDATE" }),
     ]);
+    const statusChanges = await deps.repos.audit.listByAction({
+      projectId,
+      action: "STATUS_CHANGE",
+      entityType: "PROJECT",
+      entityId: projectId,
+    });
 
     // Planejamento, linha de base e datas reais: os gravados na fase, como na EAP.
     const phases = phaseRows;
@@ -190,7 +197,18 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
         )
       : null;
 
+    const situation = projectSituation({
+      projectStatus: project.status,
+      statusHistory: formalStatusHistory(statusChanges),
+      phases,
+      tasks,
+      milestones,
+      deliveries,
+      now,
+    });
+
     return {
+      situation,
       project: {
         baselineStartAt: iso(project.baselineStartAt),
         baselineEndAt: iso(project.baselineEndAt),

@@ -141,7 +141,27 @@ const homologationItemSchema = z.object({
   reviewerName: z.string().nullable(),
 });
 
+/** Situação automática do projeto (regras aprovadas): mesma fonte para selos e indicadores. */
+export const projectSituationSchema = z
+  .object({
+    status: z.enum(["SUSPENSO", "CONCLUIDO", "CRITICO", "EM_ATENCAO", "EM_VALIDACAO", "EM_EXECUCAO", "NAO_INICIADO"]),
+    delayDays: z.number().int().describe("Maior atraso elegível, em dias corridos."),
+    delayedItems: z.number().int(),
+    pendingValidation: z.number().int().describe("Marcos entregues aguardando validação."),
+    formalDecision: z
+      .object({ status: z.enum(["SUSPENSO", "CONCLUIDO"]), decidedAt: z.string() })
+      .nullable()
+      .describe("Suspensão ou encerramento registrados no histórico do projeto."),
+    closureRequirementsMissing: z.boolean().describe("Encerramento registrado sem todas as fases concluídas."),
+    readyForClosure: z
+      .boolean()
+      .describe("Todas as fases concluídas (tarefas concluídas e marcos aceitos), sem encerramento formal; não conclui o projeto."),
+    undatedDeliveries: z.number().int().describe("Marcos entregues sem data de entrega conhecida (fora do cálculo de atraso)."),
+  })
+  .describe("Situação calculada pela EAP; a situação gravada no cadastro é preservada.");
+
 export const eapScheduleMonitoringSchema = z.object({
+  situation: projectSituationSchema,
   project: z.object({
     baselineStartAt: z.string().nullable(),
     baselineEndAt: z.string().nullable(),
