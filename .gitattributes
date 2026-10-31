@@ -1,3 +1,14 @@
+# Fim de linha padronizado em LF para arquivos de texto (evita avisos e diferenças entre Windows e Linux)
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.dump binary
+
 src/prisma/contract.json linguist-generated
 src/prisma/contract.d.ts linguist-generated
 src/prisma/ops.json linguist-generated
