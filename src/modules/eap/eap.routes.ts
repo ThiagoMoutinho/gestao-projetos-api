@@ -58,6 +58,7 @@ import {
   rescheduleRangeBodySchema,
   scheduleErrorResponses,
 } from "./schemas/eap-schedule.schema";
+import { executiveSummarySchema } from "./schemas/eap-executive-summary.schema";
 import {
   createTaskBodySchema,
   eapTaskListResponseSchema,
@@ -891,6 +892,24 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
         },
       },
       (request) => controller.getScheduleMonitoring(request),
+    );
+
+    app.get(
+      "/projects/:id/executive-summary",
+      {
+        schema: {
+          operationId: "getExecutiveSummary",
+          tags: ["Cronograma"],
+          summary: "Resumo executivo automático do projeto (somente leitura, sem snapshot)",
+          security: [{ cookieAuth: [] }],
+          params: projectIdParamsSchema,
+          response: {
+            200: executiveSummarySchema,
+            ...scheduleErrorResponses,
+          },
+        },
+      },
+      (request) => controller.getExecutiveSummary(request),
     );
   };
 }

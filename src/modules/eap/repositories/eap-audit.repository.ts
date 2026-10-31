@@ -89,4 +89,16 @@ export class DrizzleEapAuditRepository implements EapAuditRepository {
 
     return rows.map((row) => ({ ...row.log, actorName: row.actorName }));
   }
+
+  async listRecentByProject(projectId: string, limit: number) {
+    const rows = await this.client
+      .select({ log: eapAuditLogs, actorName: user.name })
+      .from(eapAuditLogs)
+      .leftJoin(user, eq(eapAuditLogs.actorId, user.id))
+      .where(eq(eapAuditLogs.projectId, projectId))
+      .orderBy(desc(eapAuditLogs.createdAt), desc(eapAuditLogs.id))
+      .limit(limit);
+
+    return rows.map((row) => ({ ...row.log, actorName: row.actorName }));
+  }
 }

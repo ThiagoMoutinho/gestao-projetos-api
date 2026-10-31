@@ -322,6 +322,8 @@ export interface EapAuditRepository {
   listByEntity(filter: EapAuditEntityFilter): Promise<EapAuditEntryRow[]>;
   /** Registros de uma ação no projeto, em ordem cronológica crescente. */
   listByAction(filter: EapAuditActionFilter): Promise<EapAuditEntryRow[]>;
+  /** Registros mais recentes do projeto, de qualquer item, do mais novo para o mais antigo. */
+  listRecentByProject(projectId: string, limit: number): Promise<EapAuditEntryRow[]>;
 }
 
 export type EapAuditActionFilter = {

@@ -761,6 +761,17 @@ class InMemoryEapAuditRepository implements EapAuditRepository {
         actorName: this.store.users.find((user) => user.id === row.actorId)?.name ?? null,
       }));
   }
+
+  async listRecentByProject(projectId: string, limit: number) {
+    return this.store.auditLogs
+      .filter((row) => row.projectId === projectId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit)
+      .map((row) => ({
+        ...row,
+        actorName: this.store.users.find((user) => user.id === row.actorId)?.name ?? null,
+      }));
+  }
 }
 
 export function makeEapInMemoryRepos(store: EapInMemoryStore): EapRepos {

@@ -36,6 +36,7 @@ import type {
   ReviewMilestoneInput,
   UpdateMilestoneInput,
 } from "./dtos/eap-milestones.dto";
+import type { ExecutiveSummaryDto } from "./schemas/eap-executive-summary.schema";
 import type {
   EapScheduleChangeDto,
   EapScheduleMonitoringDto,
@@ -252,6 +253,7 @@ type EapPhaseUseCases = {
     query: ListScheduleChangesQuery,
   ) => Promise<{ data: EapScheduleChangeDto[] }>;
   getScheduleMonitoring: (actor: AuthUser, projectId: string) => Promise<EapScheduleMonitoringDto>;
+  getExecutiveSummary: (actor: AuthUser, projectId: string) => Promise<ExecutiveSummaryDto>;
   deletePhase: (actor: AuthUser, projectId: string, phaseId: string) => Promise<void>;
   deleteTask: (
     actor: AuthUser,
@@ -779,6 +781,10 @@ export function makeEapController(useCases: EapPhaseUseCases) {
 
     async getScheduleMonitoring(request: FastifyRequest<{ Params: { id: string } }>) {
       return useCases.getScheduleMonitoring(getAuthUser(request), request.params.id);
+    },
+
+    async getExecutiveSummary(request: FastifyRequest<{ Params: { id: string } }>) {
+      return useCases.getExecutiveSummary(getAuthUser(request), request.params.id);
     },
   };
 }

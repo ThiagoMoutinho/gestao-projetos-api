@@ -26,6 +26,7 @@ import { makeGetEvidenceUseCase } from "../use-cases/get-evidence";
 import { makeGetMilestoneUseCase } from "../use-cases/get-milestone";
 import { makeGetPhaseUseCase } from "../use-cases/get-phase";
 import { makeGetTaskUseCase } from "../use-cases/get-task";
+import { makeGetExecutiveSummaryUseCase } from "../use-cases/get-executive-summary";
 import { makeGetScheduleMonitoringUseCase } from "../use-cases/get-schedule-monitoring";
 import { makeListAuditUseCase } from "../use-cases/list-audit";
 import { makeListScheduleChangesUseCase } from "../use-cases/list-schedule-changes";
@@ -113,6 +114,7 @@ export function makeEapModule(database: Database) {
     reschedule: makeRescheduleUseCase(deps),
     listScheduleChanges: makeListScheduleChangesUseCase(deps),
     getScheduleMonitoring: makeGetScheduleMonitoringUseCase(deps),
+    getExecutiveSummary: makeGetExecutiveSummaryUseCase(deps),
     deletePhase: makeDeletePhaseUseCase(deps),
     deleteTask: makeDeleteTaskUseCase(deps),
     deleteMilestone: makeDeleteMilestoneUseCase(deps),
