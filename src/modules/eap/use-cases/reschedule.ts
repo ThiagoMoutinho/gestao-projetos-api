@@ -550,6 +550,58 @@ export async function extendPhaseToCover(
   );
 }
 
+/**
+ * Recolhe o planejamento da fase depois que um item é excluído: só quando o item removido definia a
+ * borda do período (início ou término iguais aos da fase) e os itens restantes terminam antes (ou
+ * começam depois). Margens que a gestão definiu e itens ainda existentes nunca são cortados. A mudança
+ * é registrada no histórico da fase com justificativa automática; fase concluída não é alterada.
+ */
+export async function shrinkPhaseAfterRemoval(
+  repos: EapRepos,
+  project: ProjectRow,
+  actor: AuthUser,
+  input: { phaseId: string; removed: SchedulePlan; itemLabel: string },
+) {
+  const phase = await repos.phases.findByIdAndProject(input.phaseId, project.id);
+  if (!phase || phase.status === "CONCLUIDA") {
+    return null;
+  }
+  const [tasks, milestones] = await Promise.all([
+    repos.tasks.listByPhase(phase.id),
+    repos.milestones.listByPhase(phase.id),
+  ]);
+  const remaining = phaseDates(tasks, milestones, false);
+  if (!remaining.plannedStartAt && !remaining.plannedEndAt) {
+    return null;
+  }
+  const removedStart = input.removed.startAt ?? input.removed.endAt;
+  const removedEnd = input.removed.endAt ?? input.removed.startAt;
+  const shrinkEnd =
+    remaining.plannedEndAt !== null &&
+    phase.plannedEndAt !== null &&
+    sameDay(removedEnd, phase.plannedEndAt) &&
+    isBefore(remaining.plannedEndAt, phase.plannedEndAt);
+  const shrinkStart =
+    remaining.plannedStartAt !== null &&
+    phase.plannedStartAt !== null &&
+    sameDay(removedStart, phase.plannedStartAt) &&
+    isAfter(remaining.plannedStartAt, phase.plannedStartAt);
+  if (!shrinkEnd && !shrinkStart) {
+    return null;
+  }
+  return changeSchedule(
+    repos,
+    project,
+    actor,
+    { entityType: "PHASE", phaseId: phase.id },
+    {
+      startAt: shrinkStart ? remaining.plannedStartAt : phase.plannedStartAt,
+      endAt: shrinkEnd ? remaining.plannedEndAt : phase.plannedEndAt,
+    },
+    `Período da fase recalculado automaticamente após a exclusão d${input.itemLabel}.`,
+  );
+}
+
 export function makeRescheduleUseCase(deps: { repos: EapRepos; runInTransaction: EapTransactionRunner }) {
   return async function reschedule(
     actor: AuthUser,

@@ -380,11 +380,11 @@ describe("autorização de marcos da EAP", () => {
     );
   });
 
-  it("homologa somente a gestão vinculada ao projeto, sem bastar o perfil global", () => {
+  it("homologam PMO e COORDENADOR em todos os projetos e a gestão vinculada; ADMIN e GESTOR sem vínculo não", () => {
     const undesignated = { reviewerId: null };
     assert.equal(canHomologateEapMilestone(context("ADMIN"), undesignated), false);
-    assert.equal(canHomologateEapMilestone(context("PMO"), undesignated), false);
-    assert.equal(canHomologateEapMilestone(context("COORDENADOR"), undesignated), false);
+    assert.equal(canHomologateEapMilestone(context("PMO"), undesignated), true);
+    assert.equal(canHomologateEapMilestone(context("COORDENADOR"), undesignated), true);
     assert.equal(canHomologateEapMilestone(context("GESTOR"), undesignated), false);
     assert.equal(
       canHomologateEapMilestone(context("GESTOR", { memberRoles: ["GESTOR"] }), undesignated),
@@ -411,8 +411,11 @@ describe("autorização de marcos da EAP", () => {
     );
   });
 
-  it("com homologador designado, somente ele decide", () => {
+  it("com homologador designado, decidem ele, o PMO e o COORDENADOR", () => {
     const designated = { reviewerId: "user-1" };
+    assert.equal(canHomologateEapMilestone(context("PMO"), designated), true);
+    assert.equal(canHomologateEapMilestone(context("COORDENADOR"), designated), true);
+    assert.equal(canHomologateEapMilestone(context("ADMIN", { userId: "outro-admin" }), designated), false);
     assert.equal(
       canHomologateEapMilestone(context("COLABORADOR", { memberRoles: ["OBSERVADOR"] }), designated),
       true,

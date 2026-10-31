@@ -1,6 +1,7 @@
 import type { AuthUser } from "../../../lib/session";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import { syncPhaseStatus } from "./phase-rollup";
+import { shrinkPhaseAfterRemoval } from "./reschedule";
 import {
   assertCanDeleteItem,
   assertCanView,
@@ -20,7 +21,7 @@ export function makeDeleteMilestoneUseCase(deps: {
     phaseId: string,
     milestoneId: string,
   ) {
-    const { context } = await loadProjectAccess(deps.repos, actor, projectId);
+    const { project, context } = await loadProjectAccess(deps.repos, actor, projectId);
     assertCanView(context);
     assertCanDeleteItem(context);
 
@@ -70,6 +71,12 @@ export function makeDeleteMilestoneUseCase(deps: {
           createdBy: milestone.createdBy,
         },
         actorId: actor.id,
+      });
+
+      await shrinkPhaseAfterRemoval(txRepos, project, actor, {
+        phaseId,
+        removed: { startAt: null, endAt: milestone.plannedAt },
+        itemLabel: `o marco "${milestone.title}"`,
       });
 
       await syncPhaseStatus(txRepos, {

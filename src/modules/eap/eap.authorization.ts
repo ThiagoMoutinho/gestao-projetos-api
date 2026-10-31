@@ -130,8 +130,9 @@ export function canDeliverEapMilestone(
 }
 
 /**
- * Homologa o marco o gestor designado nele; sem designação, o dono ou quem tem DONO_PROJETO/GESTOR
- * no projeto. Perfis globais (inclusive ADMIN e PMO) não bastam, e fornecedor nunca homologa.
+ * Homologa o marco: o PMO e o COORDENADOR (CTIN) em todos os projetos; nos demais casos o gestor designado no
+ * marco ou, sem designação, o dono ou quem tem DONO_PROJETO/GESTOR no projeto. ADMIN não homologa só por ser
+ * administrador e fornecedor nunca homologa. A autoaprovação é barrada à parte, na decisão.
  */
 export function canHomologateEapMilestone(
   context: ProjectAccessContext,
@@ -143,6 +144,10 @@ export function canHomologateEapMilestone(
     context.memberRoles.includes("FORNECEDOR")
   ) {
     return false;
+  }
+
+  if (context.globalRole === "PMO" || context.globalRole === "COORDENADOR") {
+    return true;
   }
 
   if (milestone.reviewerId) {

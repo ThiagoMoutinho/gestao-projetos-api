@@ -632,6 +632,26 @@ describe("Cumprimento de prazo", () => {
 
     assert.equal(item?.deadlinePerformance, "DONE_ON_RESCHEDULED");
   });
+
+  it("não conta como atraso ativo a fase concluída pelos itens, mesmo com a situação gravada desatualizada", async () => {
+    const ctx = await setup();
+    await ctx.updateProgress(supplier, "project-1", ctx.phase.id, ctx.task.id, {
+      progressPercent: 100,
+      actualStartAt: day("2026-06-02"),
+      actualEndAt: day("2026-06-20"),
+    });
+    const phaseRow = ctx.store.phases.find((row) => row.id === ctx.phase.id)!;
+    phaseRow.status = "EM_ANDAMENTO";
+    phaseRow.plannedEndAt = new Date(PLAN.plannedEndAt);
+
+    const monitoring = await ctx.monitoring(pmo, "project-1");
+    const item = monitoring.items.find((entry) => entry.entityId === ctx.phase.id);
+
+    assert.equal(item?.status, "CONCLUIDA");
+    assert.equal(item?.overdue, false);
+    assert.equal(monitoring.overdue.phases + monitoring.overdue.tasks + monitoring.overdue.milestones, 0);
+    assert.equal(monitoring.situation.readyForClosure, true);
+  });
 });
 
 describe("Planejamento definido nos detalhes da tarefa", () => {

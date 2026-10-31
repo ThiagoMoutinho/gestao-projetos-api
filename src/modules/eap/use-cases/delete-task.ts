@@ -1,6 +1,7 @@
 import type { AuthUser } from "../../../lib/session";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import { syncPhaseStatus } from "./phase-rollup";
+import { shrinkPhaseAfterRemoval } from "./reschedule";
 import {
   assertCanDeleteItem,
   assertCanView,
@@ -20,7 +21,7 @@ export function makeDeleteTaskUseCase(deps: {
     phaseId: string,
     taskId: string,
   ) {
-    const { context } = await loadProjectAccess(deps.repos, actor, projectId);
+    const { project, context } = await loadProjectAccess(deps.repos, actor, projectId);
     assertCanView(context);
     assertCanDeleteItem(context);
 
@@ -74,6 +75,12 @@ export function makeDeleteTaskUseCase(deps: {
           createdBy: task.createdBy,
         },
         actorId: actor.id,
+      });
+
+      await shrinkPhaseAfterRemoval(txRepos, project, actor, {
+        phaseId,
+        removed: { startAt: task.plannedStartAt, endAt: task.plannedEndAt },
+        itemLabel: `a tarefa "${task.title}"`,
       });
 
       await syncPhaseStatus(txRepos, {

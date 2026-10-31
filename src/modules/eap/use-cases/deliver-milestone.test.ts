@@ -113,11 +113,7 @@ describe("homologação de marcos", () => {
     assert.notEqual(afterDelivery.calculatedStatus, "CONCLUIDA");
 
     await assert.rejects(
-      () => call((p, m) => ctx.reviewMilestone(pmo, "project-1", p, m, { decision: "APROVADO" })),
-      rejectsWith("MILESTONE_REVIEW_FORBIDDEN"),
-    );
-    await assert.rejects(
-      () => call((p, m) => ctx.reviewMilestone(coordinator, "project-1", p, m, { decision: "APROVADO" })),
+      () => call((p, m) => ctx.reviewMilestone(supplier, "project-1", p, m, { decision: "APROVADO" })),
       rejectsWith("MILESTONE_REVIEW_FORBIDDEN"),
     );
 

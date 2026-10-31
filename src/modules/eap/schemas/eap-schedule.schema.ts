@@ -139,6 +139,12 @@ const homologationItemSchema = z.object({
   attemptsUntilHomologation: z.number().int().nullable(),
   reviewerId: z.string().nullable(),
   reviewerName: z.string().nullable(),
+  /** Quem entregou e quando a entrega foi enviada para homologação. */
+  deliveredById: z.string().nullable(),
+  deliveredByName: z.string().nullable(),
+  submittedAt: z.string().nullable(),
+  /** O usuário atual pode homologar ou rejeitar este marco (permissão e bloqueio de autoaprovação). */
+  canDecide: z.boolean(),
 });
 
 /** Situação automática do projeto (regras aprovadas): mesma fonte para selos e indicadores. */

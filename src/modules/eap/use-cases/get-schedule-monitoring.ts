@@ -1,4 +1,5 @@
 import type { AuthUser } from "../../../lib/session";
+import { canHomologateEapMilestone } from "../eap.authorization";
 import type { EapMilestoneDeliveryRow } from "../dtos/eap-milestone-deliveries.dto";
 import {
   isRescheduleEntry,
@@ -6,7 +7,7 @@ import {
   type EapScheduleMonitoringDto,
 } from "../dtos/eap-schedule.dto";
 import type { EapRepos } from "../repositories/contracts";
-import { calculatedTaskStatus, civilDayKey, deadlinePerformance } from "./eap-status";
+import { calculatedPhaseStatus, calculatedTaskStatus, civilDayKey, deadlinePerformance } from "./eap-status";
 import { formalStatusHistory, projectSituation } from "./project-situation";
 import { assertCanView, loadProjectAccess, usesDeliveryRounds } from "./shared";
 
@@ -55,33 +56,41 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
       reschedules.filter((entry) => entry.entityType === entityType && entry.entityId === entityId).length;
 
     const items: MonitoredItem[] = [
-      ...phases.map((phase) => ({
-        entityType: "PHASE" as const,
-        entityId: phase.id,
-        phaseId: phase.id,
-        title: phase.name,
-        status: phase.status,
-        milestoneType: null,
-        baselineStartAt: iso(phase.baselineStartAt),
-        baselineEndAt: iso(phase.baselineEndAt),
-        plannedStartAt: iso(phase.plannedStartAt),
-        plannedEndAt: iso(phase.plannedEndAt),
-        actualStartAt: iso(phase.actualStartAt),
-        actualEndAt: iso(phase.actualEndAt),
-        overdue: phase.status !== "CONCLUIDA" && isPast(phase.plannedEndAt),
-        deadlinePerformance: deadlinePerformance(
-          {
-            state: phase.status === "CONCLUIDA" ? "DONE" : "OPEN",
-            baselineEndAt: phase.baselineEndAt,
-            plannedEndAt: phase.plannedEndAt,
-            actualEndAt: phase.actualEndAt,
-          },
-          now,
-        ),
-        rescheduleCount: countFor("PHASE", phase.id),
-        responsibleId: phase.responsibleId,
-        responsibleName: null,
-      })),
+      ...phases.map((phase) => {
+        // Situação calculada pelos itens (a mesma do encerramento): a gravada pode ficar desatualizada.
+        const status = calculatedPhaseStatus(
+          phase,
+          tasks.filter((task) => task.phaseId === phase.id),
+          milestones.filter((milestone) => milestone.phaseId === phase.id),
+        );
+        return {
+          entityType: "PHASE" as const,
+          entityId: phase.id,
+          phaseId: phase.id,
+          title: phase.name,
+          status,
+          milestoneType: null,
+          baselineStartAt: iso(phase.baselineStartAt),
+          baselineEndAt: iso(phase.baselineEndAt),
+          plannedStartAt: iso(phase.plannedStartAt),
+          plannedEndAt: iso(phase.plannedEndAt),
+          actualStartAt: iso(phase.actualStartAt),
+          actualEndAt: iso(phase.actualEndAt),
+          overdue: status !== "CONCLUIDA" && isPast(phase.plannedEndAt),
+          deadlinePerformance: deadlinePerformance(
+            {
+              state: status === "CONCLUIDA" ? "DONE" : "OPEN",
+              baselineEndAt: phase.baselineEndAt,
+              plannedEndAt: phase.plannedEndAt,
+              actualEndAt: phase.actualEndAt,
+            },
+            now,
+          ),
+          rescheduleCount: countFor("PHASE", phase.id),
+          responsibleId: phase.responsibleId,
+          responsibleName: null,
+        };
+      }),
       ...tasks.map((task) => {
         const status = calculatedTaskStatus(task);
         return {
@@ -155,6 +164,7 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
       .map((milestone) => {
         const rounds = roundsByMilestone.get(milestone.id) ?? [];
         const accepted = rounds.find((round) => round.status === "ACEITA");
+        const latest = [...rounds].sort((left, right) => right.round - left.round)[0];
         return {
           milestoneId: milestone.id,
           phaseId: milestone.phaseId,
@@ -167,6 +177,15 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
           attemptsUntilHomologation: accepted ? accepted.round : null,
           reviewerId: milestone.reviewerId,
           reviewerName: null as string | null,
+          deliveredById: milestone.deliveredBy,
+          deliveredByName: null as string | null,
+          submittedAt: (latest?.submittedAt ?? milestone.actualAt)?.toISOString() ?? null,
+          // Quem entregou ou submeteu não decide a própria entrega.
+          canDecide:
+            milestone.status === "ENTREGUE" &&
+            canHomologateEapMilestone(context, milestone) &&
+            milestone.deliveredBy !== actor.id &&
+            latest?.submittedBy !== actor.id,
         };
       });
 
@@ -176,11 +195,15 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
     }
     for (const item of homologationMilestones) {
       if (item.reviewerId) personIds.add(item.reviewerId);
+      if (item.deliveredById) personIds.add(item.deliveredById);
     }
     const people = await Promise.all([...personIds].map((id) => deps.repos.users.findById(id)));
     const nameOf = (id: string | null) => people.find((person) => person?.id === id)?.name ?? null;
     for (const item of items) item.responsibleName = nameOf(item.responsibleId);
-    for (const item of homologationMilestones) item.reviewerName = nameOf(item.reviewerId);
+    for (const item of homologationMilestones) {
+      item.reviewerName = nameOf(item.reviewerId);
+      item.deliveredByName = nameOf(item.deliveredById);
+    }
 
     const startedPhases = phases.filter((phase) => phase.actualStartAt);
     const allPhasesDone = phases.length > 0 && phases.every((phase) => phase.status === "CONCLUIDA");

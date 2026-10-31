@@ -261,13 +261,6 @@ describe("automação de situação e datas", () => {
         }),
       rejectsWith("MILESTONE_REVIEW_FORBIDDEN"),
     );
-    await assert.rejects(
-      () =>
-        ctx.reviewMilestone(pmo, "project-1", phase.id, milestone.id, {
-          decision: "APROVADO",
-        }),
-      rejectsWith("MILESTONE_REVIEW_FORBIDDEN"),
-    );
 
     const approved = await ctx.reviewMilestone(owner, "project-1", phase.id, milestone.id, {
       decision: "APROVADO",
