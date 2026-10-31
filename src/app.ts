@@ -17,6 +17,9 @@ import { auth } from "./lib/auth";
 import { makeEapRoutes } from "./modules/eap/eap.routes";
 import { makeEapModule } from "./modules/eap/factories/make-eap-controller";
 import { makeProjectsModule } from "./modules/projects/factories/make-projects-controller";
+import { makeInstitutionalModule } from "./modules/institutional/factories/make-institutional-module";
+import { makeInstitutionalRoutes } from "./modules/institutional/institutional.routes";
+import { makeOverviewLayoutModule, makeOverviewLayoutRoutes } from "./modules/overview-layout/overview-layout.routes";
 import { makeProjectsRoutes } from "./modules/projects/projects.routes";
 
 export async function buildApp() {
@@ -183,6 +186,10 @@ export async function buildApp() {
 
   const eapController = makeEapModule(db);
   await app.register(makeEapRoutes(eapController));
+
+  const institutionalController = makeInstitutionalModule(db);
+  await app.register(makeInstitutionalRoutes(institutionalController));
+  await app.register(makeOverviewLayoutRoutes(makeOverviewLayoutModule(db)));
 
   return app;
 }

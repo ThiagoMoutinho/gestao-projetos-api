@@ -559,6 +559,9 @@ export const evidenceLockedError = () =>
     "EVIDENCE_LOCKED",
   );
 
+export const evidenceKindError = (message: string) =>
+  new HttpError(400, message, "EVIDENCE_KIND_INVALID");
+
 export const evidenceNotFoundError = () =>
   new HttpError(404, "Evidência não encontrada neste projeto.", "EVIDENCE_NOT_FOUND");
 

@@ -91,6 +91,7 @@ export type NewEapTaskRecord = {
   status: EapTaskRow["status"];
   progressPercent: number;
   weight: number;
+  priority: EapTaskRow["priority"];
   baselineStartAt: Date | null;
   baselineEndAt: Date | null;
   plannedStartAt: Date | null;
@@ -105,6 +106,7 @@ export type EapTaskUpdateRecord = {
   description?: string | null;
   assigneeId?: string | null;
   weight?: number;
+  priority?: EapTaskRow["priority"];
   status?: EapTaskRow["status"];
   progressPercent?: number;
   baselineStartAt?: Date | null;
@@ -243,16 +245,24 @@ export type NewEapEvidenceRecord = {
   taskId: string | null;
   milestoneId: string | null;
   scheduleRequestId: string | null;
+  /** Evidência vinculada diretamente ao projeto (sem fase, tarefa, marco ou solicitação). */
+  projectId?: string | null;
+  /** Evidência de um resultado do projeto (comprovação de resultado alcançado). */
+  projectResultId?: string | null;
   /** Evidência anexada pelo homologador na decisão já nasce vinculada (e travada) à rodada. */
   deliveryId?: string | null;
   title: string;
   url: string;
+  kind?: string | null;
+  ticketNumber?: string | null;
   createdBy: string;
 };
 
 export type EapEvidenceUpdateRecord = {
   title?: string;
   url?: string;
+  kind?: string | null;
+  ticketNumber?: string | null;
 };
 
 export interface EapEvidencesRepository {

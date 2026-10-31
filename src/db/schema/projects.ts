@@ -38,6 +38,8 @@ export const projects = pgTable(
     name: text("name").notNull(),
     description: text("description"),
     glpiTicketId: text("glpi_ticket_id"),
+    /** Chamado GLPI da solicitação formal de abertura feita ao Escritório de Projetos (opcional). */
+    pmoGlpiTicketId: text("pmo_glpi_ticket_id"),
     ownerId: text("owner_id")
       .notNull()
       .references(() => user.id),

@@ -112,7 +112,7 @@ describe("Exclusão de itens da EAP", () => {
       phaseId: ctx.phase.id,
       taskId: null,
       milestoneId: null,
-      scheduleRequestId: null,
+      scheduleRequestId: null, projectId: null, projectResultId: null, kind: null, ticketNumber: null,
       title: "Ata",
       url: "https://exemplo.com/ata",
       deliveryId: null,

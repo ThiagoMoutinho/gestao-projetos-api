@@ -3,7 +3,7 @@ import type { CreateEvidenceInput } from "../dtos/eap-evidences.dto";
 import { toEapEvidenceDto } from "../dtos/eap-evidences.dto";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import { assertEvidenceParentInProject } from "./evidence-parent";
-import { assertCanRegisterEvidenceOn, assertCanView, loadProjectAccess } from "./shared";
+import { assertCanRegisterEvidenceOn, assertCanView, evidenceKindError, loadProjectAccess } from "./shared";
 
 export function makeCreateEvidenceUseCase(deps: {
   repos: EapRepos;
@@ -19,6 +19,13 @@ export function makeCreateEvidenceUseCase(deps: {
     const parent = await assertEvidenceParentInProject(deps.repos, projectId, input);
     assertCanRegisterEvidenceOn(context, parent);
 
+    const isTicket = input.kind === "GLPI_TICKET";
+    // Chamado GLPI sem título usa "GLPI #número". O cadastro é só um vínculo com um chamado existente.
+    const title = input.title ?? (isTicket ? `GLPI #${input.ticketNumber}` : undefined);
+    if (!title || (isTicket && !input.ticketNumber)) {
+      throw evidenceKindError("Informe o título da evidência ou o número do chamado GLPI.");
+    }
+
     const created = await deps.runInTransaction(async (txRepos) => {
       await assertEvidenceParentInProject(txRepos, projectId, input);
 
@@ -28,8 +35,11 @@ export function makeCreateEvidenceUseCase(deps: {
         taskId: input.taskId ?? null,
         milestoneId: input.milestoneId ?? null,
         scheduleRequestId: input.scheduleRequestId ?? null,
-        title: input.title,
+        projectId: input.projectLevel ? projectId : null,
+        title,
         url: input.url,
+        kind: input.kind ?? null,
+        ticketNumber: isTicket ? (input.ticketNumber ?? null) : null,
         createdBy: actor.id,
       });
 
@@ -45,8 +55,11 @@ export function makeCreateEvidenceUseCase(deps: {
           taskId: evidence.taskId,
           milestoneId: evidence.milestoneId,
           scheduleRequestId: evidence.scheduleRequestId,
+          projectId: evidence.projectId,
           title: evidence.title,
           url: evidence.url,
+          kind: evidence.kind,
+          ticketNumber: evidence.ticketNumber,
         },
         actorId: actor.id,
       });

@@ -6,6 +6,7 @@ import { assertEvidenceParentInProject } from "./evidence-parent";
 import {
   assertCanRegisterEvidenceOn,
   assertCanView,
+  evidenceKindError,
   evidenceLockedError,
   evidenceNotFoundError,
   loadProjectAccess,
@@ -34,6 +35,19 @@ export function makeUpdateEvidenceUseCase(deps: {
       throw evidenceLockedError();
     }
 
+    // Classificação: o chamado GLPI exige número; os demais tipos não têm número. Sem mudança silenciosa: tudo vai para a auditoria.
+    const nextKind = input.kind ?? current.kind;
+    const nextTicketNumber =
+      nextKind === "GLPI_TICKET" ? (input.ticketNumber ?? current.ticketNumber) : null;
+    if (nextKind === "GLPI_TICKET" && !nextTicketNumber) {
+      throw evidenceKindError("Informe o número do chamado GLPI.");
+    }
+    if (input.ticketNumber !== undefined && nextKind !== "GLPI_TICKET") {
+      throw evidenceKindError("O número do chamado só se aplica ao tipo Chamado GLPI.");
+    }
+    const kindChanged = nextKind !== current.kind;
+    const ticketChanged = nextTicketNumber !== current.ticketNumber;
+
     return deps.runInTransaction(async (txRepos) => {
       const stillThere = await txRepos.evidences.findByIdAndProject(evidenceId, projectId);
       if (!stillThere) {
@@ -43,6 +57,8 @@ export function makeUpdateEvidenceUseCase(deps: {
       const updated = await txRepos.evidences.update(evidenceId, {
         ...(input.title !== undefined ? { title: input.title } : {}),
         ...(input.url !== undefined ? { url: input.url } : {}),
+        ...(kindChanged ? { kind: nextKind } : {}),
+        ...(kindChanged || ticketChanged ? { ticketNumber: nextTicketNumber } : {}),
       });
 
       if (!updated) {
@@ -63,6 +79,8 @@ export function makeUpdateEvidenceUseCase(deps: {
           scheduleRequestId: updated.scheduleRequestId,
           title: input.title,
           url: input.url,
+          ...(kindChanged ? { kind: { from: current.kind, to: nextKind } } : {}),
+          ...(ticketChanged ? { ticketNumber: { from: current.ticketNumber, to: nextTicketNumber } } : {}),
         },
         actorId: actor.id,
       });

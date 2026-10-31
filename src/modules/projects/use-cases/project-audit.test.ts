@@ -31,7 +31,7 @@ function setup() {
         id: "project-1",
         name: "Projeto",
         description: null,
-        glpiTicketId: null,
+        glpiTicketId: null, pmoGlpiTicketId: null,
         ownerId: "owner-1",
         status: "NAO_INICIADO",
         ...noPlan,

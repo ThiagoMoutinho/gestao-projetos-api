@@ -295,6 +295,37 @@ describe("Evidências da EAP", () => {
     );
   });
 
+  it("vincula evidência diretamente ao projeto, bloqueia observador e quem não tem vínculo, e a lista junto das demais", async () => {
+    const ctx = await setup();
+    const input = { title: "Documento no SharePoint", url: "https://sharepoint.example/doc", projectLevel: true as const };
+
+    const created = await ctx.createEvidence(actor("GESTOR", "gestor-1"), "project-1", input);
+    await ctx.createEvidence(actor("PMO", "pmo-1"), "project-1", { ...input, title: "Outro" });
+    assert.equal(created.projectId, "project-1");
+    assert.equal(created.phaseId, null);
+    assert.equal(created.taskId, null);
+
+    // Segue a regra já existente das evidências: papéis contribuidores (ex.: fornecedor) também registram.
+    await ctx.createEvidence(actor("FORNECEDOR", "forn-1"), "project-1", { ...input, title: "Do fornecedor" });
+    for (const denied of [actor("COLABORADOR", "obs-1"), actor("COLABORADOR", "outsider-1")]) {
+      await assert.rejects(
+        () => ctx.createEvidence(denied, "project-1", input),
+        (error: unknown) => error instanceof HttpError && ["EVIDENCE_MANAGE_FORBIDDEN", "PROJECT_FORBIDDEN"].includes(error.code),
+      );
+    }
+
+    const all = await ctx.listEvidences(actor("PMO", "pmo-1"), "project-1", {});
+    assert.ok(all.data.some((item) => item.id === created.id));
+    const other = await ctx.listEvidences(actor("PMO", "pmo-1"), "project-2", {});
+    assert.ok(other.data.every((item) => item.id !== created.id));
+
+    assert.equal(createEvidenceBodySchema.safeParse({ title: "x", url: "https://x.test", projectLevel: true }).success, true);
+    assert.equal(
+      createEvidenceBodySchema.safeParse({ title: "x", url: "https://x.test", projectLevel: true, taskId: "t" }).success,
+      false,
+    );
+  });
+
   it("rejeita no schema vínculo ausente, duplo, arquivo e troca de pai", () => {
     assert.equal(
       createEvidenceBodySchema.safeParse({
@@ -333,6 +364,78 @@ describe("Evidências da EAP", () => {
         url: "ftp://igepps.example/arquivo",
       }).success,
       false,
+    );
+  });
+
+it("classifica evidências: Chamado GLPI sem título usa \"GLPI #número\" e guarda o tipo na auditoria", async () => {
+    const ctx = await setup();
+    const parsed = createEvidenceBodySchema.parse({
+      kind: "GLPI_TICKET",
+      ticketNumber: "#352587",
+      url: "https://glpi.example/front/ticket.form.php?id=352587",
+      phaseId: ctx.phase.id,
+    });
+    assert.equal(parsed.ticketNumber, "352587");
+
+    const created = await ctx.createEvidence(actor("PMO", "pmo-1"), "project-1", parsed);
+    assert.equal(created.title, "GLPI #352587");
+    assert.equal(created.kind, "GLPI_TICKET");
+    assert.equal(created.ticketNumber, "352587");
+    assert.equal(ctx.store.evidences.filter((row) => row.id === created.id).length, 1);
+    const log = ctx.store.auditLogs.find((row) => row.entityId === created.id && row.action === "CREATE");
+    assert.equal((log?.payload as { kind?: string } | null)?.kind, "GLPI_TICKET");
+
+    const plain = await ctx.createEvidence(actor("PMO", "pmo-1"), "project-1", {
+      title: "Ata de kickoff",
+      url: "https://igepps.example/ata",
+      kind: "MINUTES",
+      taskId: ctx.task.id,
+    });
+    assert.equal(plain.kind, "MINUTES");
+    assert.equal(plain.ticketNumber, null);
+  });
+
+  it("valida no schema: GLPI exige número, número só vale para GLPI e os demais tipos exigem título", () => {
+    const base = { url: "https://igepps.example/x", taskId: "task-1" };
+    assert.equal(createEvidenceBodySchema.safeParse({ ...base, kind: "GLPI_TICKET" }).success, false);
+    assert.equal(createEvidenceBodySchema.safeParse({ ...base, kind: "GLPI_TICKET", ticketNumber: "abc" }).success, false);
+    assert.equal(createEvidenceBodySchema.safeParse({ ...base, kind: "DOCUMENT", title: "Doc", ticketNumber: "1" }).success, false);
+    assert.equal(createEvidenceBodySchema.safeParse({ ...base, kind: "REPORT" }).success, false);
+    assert.equal(createEvidenceBodySchema.safeParse({ ...base, kind: "INVALIDO", title: "x" }).success, false);
+    assert.equal(createEvidenceBodySchema.safeParse({ ...base, title: "Sem tipo (registro antigo)" }).success, true);
+  });
+
+  it("classifica evidência antiga sem recadastrar, audita de/para e bloqueia mudança silenciosa em rodada de homologação", async () => {
+    const ctx = await setup();
+    const old = await ctx.createEvidence(actor("PMO", "pmo-1"), "project-1", {
+      title: "Registro antigo",
+      url: "https://igepps.example/antigo",
+      taskId: ctx.task.id,
+    });
+    assert.equal(old.kind, null);
+
+    const updated = await ctx.updateEvidence(actor("PMO", "pmo-1"), "project-1", old.id, { kind: "REPORT" });
+    assert.equal(updated.kind, "REPORT");
+    assert.equal(updated.title, "Registro antigo");
+    const log = ctx.store.auditLogs.filter((row) => row.entityId === old.id && row.action === "UPDATE").at(-1);
+    assert.deepEqual((log?.payload as { kind?: unknown } | null)?.kind, { from: null, to: "REPORT" });
+
+    await assert.rejects(
+      () => ctx.updateEvidence(actor("PMO", "pmo-1"), "project-1", old.id, { kind: "GLPI_TICKET" }),
+      (error: unknown) => error instanceof HttpError && error.statusCode === 400,
+    );
+    const glpi = await ctx.updateEvidence(actor("PMO", "pmo-1"), "project-1", old.id, { kind: "GLPI_TICKET", ticketNumber: "99" });
+    assert.equal(glpi.ticketNumber, "99");
+    const back = await ctx.updateEvidence(actor("PMO", "pmo-1"), "project-1", old.id, { kind: "OTHER" });
+    assert.equal(back.ticketNumber, null);
+
+    const locked = ctx.store.evidences.find((row) => row.id === old.id);
+    if (locked) {
+      locked.deliveryId = "delivery-1";
+    }
+    await assert.rejects(
+      () => ctx.updateEvidence(actor("PMO", "pmo-1"), "project-1", old.id, { kind: "DOCUMENT" }),
+      (error: unknown) => error instanceof HttpError && error.statusCode === 409,
     );
   });
 });

@@ -3,6 +3,8 @@ import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export * from "./schema/auth-schema";
 export * from "./schema/eap";
+export * from "./schema/overview-layout";
+export * from "./schema/project-profile";
 export * from "./schema/projects";
 
 export const users = pgTable("users", {

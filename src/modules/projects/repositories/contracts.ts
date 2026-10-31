@@ -18,6 +18,7 @@ export type ProjectUpdateRecord = {
   name?: string;
   description?: string | null;
   glpiTicketId?: string | null;
+  pmoGlpiTicketId?: string | null;
   ownerId?: string;
   status?: ProjectRow["status"];
   baselineStartAt?: Date | null;
@@ -80,6 +81,10 @@ export interface UsersRepository {
 }
 
 export type ProjectAuditAction =
+  | "CREATE"
+  | "UPDATE"
+  | "DELETE"
+  | "INSTITUTIONAL_VALIDATE"
   | "STATUS_CHANGE"
   | "MEMBER_ADD"
   | "MEMBER_UPDATE"
@@ -89,7 +94,7 @@ export type ProjectAuditAction =
 /** Registro de auditoria do projeto, gravado na mesma trilha imutável da EAP. */
 export type NewProjectAuditRecord = {
   projectId: string;
-  entityType: "PROJECT" | "PROJECT_MEMBER";
+  entityType: "PROJECT" | "PROJECT_MEMBER" | "PROJECT_PROFILE" | "PROJECT_RESULT" | "PROJECT_HIGHLIGHT";
   entityId: string;
   action: ProjectAuditAction;
   summary: string;

@@ -17,6 +17,7 @@ export type UpdateProjectInput = {
   name?: string;
   description?: string | null;
   glpiTicketId?: string | null;
+  pmoGlpiTicketId?: string | null;
   ownerId?: string;
   status?: ProjectRow["status"];
 };
@@ -38,6 +39,7 @@ export type ProjectDto = {
   name: string;
   description: string | null;
   glpiTicketId: string | null;
+  pmoGlpiTicketId: string | null;
   ownerId: string;
   status: ProjectRow["status"];
   baselineStartAt: string | null;
@@ -87,6 +89,7 @@ export function toProjectDto(row: ProjectRow): ProjectDto {
     name: row.name,
     description: row.description,
     glpiTicketId: row.glpiTicketId,
+    pmoGlpiTicketId: row.pmoGlpiTicketId,
     ownerId: row.ownerId,
     status: row.status,
     baselineStartAt: row.baselineStartAt?.toISOString() ?? null,

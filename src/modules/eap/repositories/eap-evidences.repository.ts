@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, lte, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
-import { eapEvidences, eapMilestones, eapPhases, eapScheduleRequests, eapTasks } from "../../../db/schema";
+import { eapEvidences, eapMilestones, eapPhases, eapScheduleRequests, eapTasks, projectResults } from "../../../db/schema";
 import type { DbClient } from "../../../db/types";
 import type {
   EapEvidencesRepository,
@@ -23,6 +23,8 @@ export class DrizzleEapEvidencesRepository implements EapEvidencesRepository {
       eq(taskPhases.projectId, projectId),
       eq(milestonePhases.projectId, projectId),
       eq(eapScheduleRequests.projectId, projectId),
+      eq(eapEvidences.projectId, projectId),
+      eq(projectResults.projectId, projectId),
     );
   }
 
@@ -53,6 +55,7 @@ export class DrizzleEapEvidencesRepository implements EapEvidencesRepository {
       .leftJoin(eapMilestones, eq(eapEvidences.milestoneId, eapMilestones.id))
       .leftJoin(milestonePhases, eq(eapMilestones.phaseId, milestonePhases.id))
       .leftJoin(eapScheduleRequests, eq(eapEvidences.scheduleRequestId, eapScheduleRequests.id))
+      .leftJoin(projectResults, eq(eapEvidences.projectResultId, projectResults.id))
       .where(and(...conditions))
       .orderBy(asc(eapEvidences.createdAt), asc(eapEvidences.title));
   }

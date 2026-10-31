@@ -27,7 +27,7 @@ function seedStore() {
         id: "project-1",
         name: "Projeto",
         description: null,
-        glpiTicketId: "12345",
+        glpiTicketId: "12345", pmoGlpiTicketId: null,
         ownerId: "pmo-1",
         status: "NAO_INICIADO",
         ...noPlan,

@@ -12,6 +12,8 @@ export const eapTaskStatusSchema = z.enum([
 
 export type EapTaskStatus = z.infer<typeof eapTaskStatusSchema>;
 
+export const eapTaskPrioritySchema = z.enum(["CRITICA", "ALTA", "NORMAL", "BAIXA"]);
+
 const isoDateTimeSchema = z
   .string()
   .min(1)
@@ -31,6 +33,7 @@ export const createTaskBodySchema = z
     description: z.string().trim().max(4000).nullable().optional(),
     assigneeId: z.string().min(1).nullable().optional(),
     weight: z.number().int().min(1).optional(),
+    priority: eapTaskPrioritySchema.optional().describe("Padrão: NORMAL."),
     plannedStartAt: isoDateTimeSchema
       .nullable()
       .optional()
@@ -62,6 +65,7 @@ export const updateTaskBodySchema = z
     description: z.string().trim().max(4000).nullable().optional(),
     assigneeId: z.string().min(1).nullable().optional(),
     weight: z.number().int().min(1).optional(),
+    priority: eapTaskPrioritySchema.optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {
@@ -108,6 +112,7 @@ export const eapTaskSchema = z.object({
   status: eapTaskStatusSchema,
   progressPercent: z.number().int(),
   weight: z.number().int(),
+  priority: eapTaskPrioritySchema,
   baselineStartAt: z.string().nullable(),
   baselineEndAt: z.string().nullable(),
   plannedStartAt: z.string().nullable(),

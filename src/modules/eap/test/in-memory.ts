@@ -543,6 +543,9 @@ class InMemoryEapEvidencesRepository implements EapEvidencesRepository {
   constructor(private readonly store: EapInMemoryStore) {}
 
   private projectIdOf(row: EapEvidenceRow) {
+    if (row.projectId) {
+      return row.projectId;
+    }
     if (row.phaseId) {
       return this.store.phases.find((item) => item.id === row.phaseId)?.projectId ?? null;
     }
@@ -605,6 +608,10 @@ class InMemoryEapEvidencesRepository implements EapEvidencesRepository {
 
   async create(data: NewEapEvidenceRecord) {
     const row: EapEvidenceRow = {
+      projectId: null,
+      projectResultId: null,
+      kind: null,
+      ticketNumber: null,
       ...data,
       deliveryId: data.deliveryId ?? null,
       createdAt: new Date(),
@@ -833,6 +840,7 @@ export function makeProject(
     name: overrides.name ?? "Projeto",
     description: overrides.description ?? null,
     glpiTicketId: overrides.glpiTicketId ?? null,
+    pmoGlpiTicketId: overrides.pmoGlpiTicketId ?? null,
     status: overrides.status ?? "NAO_INICIADO",
     ...noPlan,
     createdAt: overrides.createdAt ?? now,

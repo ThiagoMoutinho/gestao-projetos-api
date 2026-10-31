@@ -368,6 +368,7 @@ export function makeImportEapUseCase(deps: { repos: EapRepos; runInTransaction: 
               status: "NAO_INICIADA",
               progressPercent: 0,
               weight: 1,
+              priority: "NORMAL",
               plannedStartAt: item.startAt,
               plannedEndAt: item.endAt,
               baselineStartAt: item.startAt,

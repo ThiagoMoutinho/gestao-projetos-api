@@ -120,6 +120,69 @@
       "when": 1792945197155,
       "tag": "0016_milestone_presenter",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793069474193,
+      "tag": "0017_project_institutional_profile",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793143800279,
+      "tag": "0018_task_priority",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793229646971,
+      "tag": "0019_profile_direct_publish",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793230778194,
+      "tag": "0020_rename_responsible_company",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793279846106,
+      "tag": "0021_project_results_homologation",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793374520386,
+      "tag": "0022_system_description_results_summary",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793378807093,
+      "tag": "0023_user_overview_layouts",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793409274363,
+      "tag": "0024_evidence_kind",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793410470769,
+      "tag": "0025_evidence_ticket_integrity",
+      "breakpoints": true
     }
   ]
 }

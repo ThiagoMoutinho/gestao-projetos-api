@@ -14,6 +14,8 @@ import {
   taskNotFoundError,
 } from "./shared";
 
+const PRIORITY_LABELS = { CRITICA: "Crítica", ALTA: "Alta", NORMAL: "Normal", BAIXA: "Baixa" } as const;
+
 export function makeUpdateTaskUseCase(deps: {
   repos: EapRepos;
   runInTransaction: EapTransactionRunner;
@@ -39,12 +41,15 @@ export function makeUpdateTaskUseCase(deps: {
       await assertValidAssignee(deps.repos, projectId, project.ownerId, input.assigneeId);
     }
 
+    const priorityChanged = input.priority !== undefined && input.priority !== current.priority;
+
     return deps.runInTransaction(async (txRepos) => {
       const updated = await txRepos.tasks.update(taskId, phaseId, {
         ...(input.title !== undefined ? { title: input.title } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.assigneeId !== undefined ? { assigneeId: input.assigneeId } : {}),
         ...(input.weight !== undefined ? { weight: input.weight } : {}),
+        ...(input.priority !== undefined ? { priority: input.priority } : {}),
         updatedBy: actor.id,
         updatedAt: new Date(),
       });
@@ -59,13 +64,17 @@ export function makeUpdateTaskUseCase(deps: {
         entityType: "TASK",
         entityId: updated.id,
         action: "UPDATE",
-        summary: `Tarefa "${updated.title}" atualizada.`,
+        summary: priorityChanged
+          ? `Prioridade da tarefa "${updated.title}" alterada de ${PRIORITY_LABELS[current.priority]} para ${PRIORITY_LABELS[updated.priority]}.`
+          : `Tarefa "${updated.title}" atualizada.`,
         payload: {
           kind: "STRUCTURE",
           title: input.title,
           description: input.description,
           assigneeId: input.assigneeId,
           weight: input.weight,
+          priority: priorityChanged ? updated.priority : undefined,
+          previousPriority: priorityChanged ? current.priority : undefined,
         },
         actorId: actor.id,
       });

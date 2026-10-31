@@ -73,6 +73,7 @@ export function makeUpdateProjectUseCase(deps: {
         ...(input.glpiTicketId !== undefined
           ? { glpiTicketId: input.glpiTicketId }
           : {}),
+        ...(input.pmoGlpiTicketId !== undefined ? { pmoGlpiTicketId: input.pmoGlpiTicketId } : {}),
         ...(input.ownerId !== undefined ? { ownerId: input.ownerId } : {}),
         ...(input.status !== undefined ? { status: input.status } : {}),
         updatedAt: new Date(),

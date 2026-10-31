@@ -70,6 +70,7 @@ class InMemoryProjectsRepository implements ProjectsRepository {
   async create(data: NewProjectRecord) {
     const now = new Date();
     const row: ProjectRow = {
+      pmoGlpiTicketId: null,
       ...data,
       ...noPlan,
       createdAt: now,

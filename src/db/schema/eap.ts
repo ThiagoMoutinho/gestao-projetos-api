@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { user } from "./auth-schema";
+import { projectResults } from "./project-profile";
 import { projects } from "./projects";
 
 export const eapPhaseStatusEnum = pgEnum("eap_phase_status", [
@@ -23,6 +24,8 @@ export const eapPhaseStatusEnum = pgEnum("eap_phase_status", [
   "CONCLUIDA",
   "SUSPENSA",
 ]);
+
+export const eapTaskPriorityEnum = pgEnum("eap_task_priority", ["CRITICA", "ALTA", "NORMAL", "BAIXA"]);
 
 export const eapTaskStatusEnum = pgEnum("eap_task_status", [
   "NAO_INICIADA",
@@ -85,6 +88,7 @@ export const eapAuditActionEnum = pgEnum("eap_audit_action", [
   "MEMBER_UPDATE",
   "MEMBER_REMOVE",
   "OWNER_TRANSFER",
+  "INSTITUTIONAL_VALIDATE",
 ]);
 
 const exclusiveScheduleTargetChk = (
@@ -181,6 +185,8 @@ export const eapTasks = pgTable(
     status: eapTaskStatusEnum("status").default("NAO_INICIADA").notNull(),
     progressPercent: integer("progress_percent").default(0).notNull(),
     weight: integer("weight").default(1).notNull(),
+    /** Classificação exclusiva das tarefas; fases e marcos não têm prioridade. */
+    priority: eapTaskPriorityEnum("priority").default("NORMAL").notNull(),
     baselineStartAt: timestamp("baseline_start_at"),
     baselineEndAt: timestamp("baseline_end_at"),
     plannedStartAt: timestamp("planned_start_at"),
@@ -500,8 +506,16 @@ export const eapEvidences = pgTable(
       () => eapScheduleRequests.id,
       { onDelete: "cascade" },
     ),
+    /** Evidência ou referência vinculada diretamente ao projeto (ex.: documento no SharePoint). */
+    projectId: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
+    /** Evidência de um resultado do projeto (comprovação de resultado alcançado). */
+    projectResultId: text("project_result_id").references((): AnyPgColumn => projectResults.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     url: text("url").notNull(),
+    /** Tipo da evidência (DOCUMENT, MINUTES, REPORT, GLPI_TICKET, OTHER). Nulo = registro anterior à classificação ("Sem classificação"). */
+    kind: text("kind"),
+    /** Número do chamado GLPI (apenas para kind = GLPI_TICKET). É só uma referência a um chamado existente. */
+    ticketNumber: text("ticket_number"),
     deliveryId: text("delivery_id").references(() => eapMilestoneDeliveries.id, {
       onDelete: "set null",
     }),
@@ -516,6 +530,17 @@ export const eapEvidences = pgTable(
     index("eap_evidences_task_id_idx").on(table.taskId),
     index("eap_evidences_milestone_id_idx").on(table.milestoneId),
     index("eap_evidences_schedule_request_id_idx").on(table.scheduleRequestId),
+    index("eap_evidences_project_id_idx").on(table.projectId),
+    index("eap_evidences_project_result_id_idx").on(table.projectResultId),
+    check(
+      "eap_evidences_kind_chk",
+      sql`${table.kind} IS NULL OR ${table.kind} IN ('DOCUMENT', 'MINUTES', 'REPORT', 'GLPI_TICKET', 'OTHER')`,
+    ),
+    check(
+      "eap_evidences_ticket_number_chk",
+      // CASE evita o resultado NULL (que o CHECK aceitaria): kind nulo ou diferente de GLPI exige ticket_number nulo; GLPI exige número de 1 a 12 dígitos.
+      sql`CASE WHEN ${table.kind} = 'GLPI_TICKET' THEN ${table.ticketNumber} IS NOT NULL AND ${table.ticketNumber} ~ '^[0-9]{1,12}$' ELSE ${table.ticketNumber} IS NULL END`,
+    ),
     check(
       "eap_evidences_exactly_one_parent_chk",
       sql`(
@@ -523,6 +548,8 @@ export const eapEvidences = pgTable(
         + (CASE WHEN ${table.taskId} IS NULL THEN 0 ELSE 1 END)
         + (CASE WHEN ${table.milestoneId} IS NULL THEN 0 ELSE 1 END)
         + (CASE WHEN ${table.scheduleRequestId} IS NULL THEN 0 ELSE 1 END)
+        + (CASE WHEN ${table.projectId} IS NULL THEN 0 ELSE 1 END)
+        + (CASE WHEN ${table.projectResultId} IS NULL THEN 0 ELSE 1 END)
       ) = 1`,
     ),
   ],

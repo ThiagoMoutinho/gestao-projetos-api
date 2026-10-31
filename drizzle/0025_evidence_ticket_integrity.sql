@@ -1,0 +1,2 @@
+ALTER TABLE "eap_evidences" DROP CONSTRAINT "eap_evidences_ticket_number_chk";--> statement-breakpoint
+ALTER TABLE "eap_evidences" ADD CONSTRAINT "eap_evidences_ticket_number_chk" CHECK (CASE WHEN "eap_evidences"."kind" = 'GLPI_TICKET' THEN "eap_evidences"."ticket_number" IS NOT NULL AND "eap_evidences"."ticket_number" ~ '^[0-9]{1,12}$' ELSE "eap_evidences"."ticket_number" IS NULL END);

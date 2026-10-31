@@ -47,6 +47,7 @@ export const updateProjectBodySchema = z
     name: z.string().trim().min(1).max(255).optional(),
     description: z.string().trim().max(4000).nullable().optional(),
     glpiTicketId: z.string().trim().max(50).nullable().optional(),
+    pmoGlpiTicketId: z.string().trim().max(50).nullable().optional(),
     ownerId: z.string().min(1).optional(),
     status: projectStatusSchema.optional(),
   })
@@ -75,6 +76,7 @@ export const projectSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   glpiTicketId: z.string().nullable(),
+  pmoGlpiTicketId: z.string().nullable(),
   ownerId: z.string(),
   status: projectStatusSchema,
   baselineStartAt: z.string().nullable().describe("Início do planejamento original."),

@@ -1,0 +1,2 @@
+CREATE TYPE "public"."eap_task_priority" AS ENUM('CRITICA', 'ALTA', 'NORMAL', 'BAIXA');--> statement-breakpoint
+ALTER TABLE "eap_tasks" ADD COLUMN "priority" "eap_task_priority" DEFAULT 'NORMAL' NOT NULL;

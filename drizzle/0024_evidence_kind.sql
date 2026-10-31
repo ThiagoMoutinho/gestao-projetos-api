@@ -1,0 +1,4 @@
+ALTER TABLE "eap_evidences" ADD COLUMN "kind" text;--> statement-breakpoint
+ALTER TABLE "eap_evidences" ADD COLUMN "ticket_number" text;--> statement-breakpoint
+ALTER TABLE "eap_evidences" ADD CONSTRAINT "eap_evidences_kind_chk" CHECK ("eap_evidences"."kind" IS NULL OR "eap_evidences"."kind" IN ('DOCUMENT', 'MINUTES', 'REPORT', 'GLPI_TICKET', 'OTHER'));--> statement-breakpoint
+ALTER TABLE "eap_evidences" ADD CONSTRAINT "eap_evidences_ticket_number_chk" CHECK (("eap_evidences"."kind" = 'GLPI_TICKET' AND "eap_evidences"."ticket_number" IS NOT NULL) OR ("eap_evidences"."kind" IS DISTINCT FROM 'GLPI_TICKET' AND "eap_evidences"."ticket_number" IS NULL));
