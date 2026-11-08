@@ -89,6 +89,7 @@ export const eapAuditActionEnum = pgEnum("eap_audit_action", [
   "MEMBER_REMOVE",
   "OWNER_TRANSFER",
   "INSTITUTIONAL_VALIDATE",
+  "EXECUTIVE_SUMMARY_VALIDATE",
 ]);
 
 const exclusiveScheduleTargetChk = (

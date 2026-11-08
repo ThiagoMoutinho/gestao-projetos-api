@@ -2,10 +2,14 @@ import { relations } from "drizzle-orm";
 import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export * from "./schema/auth-schema";
+export * from "./schema/business-calendar";
 export * from "./schema/eap";
+export * from "./schema/executive-summary";
+export * from "./schema/notifications";
 export * from "./schema/overview-layout";
 export * from "./schema/project-profile";
 export * from "./schema/projects";
+export * from "./schema/user-admin";
 
 export const users = pgTable("users", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

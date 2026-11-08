@@ -1,5 +1,5 @@
-import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index, pgEnum } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
+import { pgTable, text, timestamp, boolean, check, index, pgEnum, type AnyPgColumn } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", [
   "ADMIN",
@@ -10,19 +10,27 @@ export const userRoleEnum = pgEnum("user_role", [
   "COLABORADOR",
 ]);
 
-export const user = pgTable("user", {
+export const user = pgTable(
+  "user",
+  {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
   role: userRoleEnum("role").default("COLABORADOR").notNull(),
+  /** Usuário inativo não entra, não mantém sessão e não recebe novas notificações (gestão pelo ADMIN). */
+  isActive: boolean("is_active").default(true).notNull(),
+  deactivatedAt: timestamp("deactivated_at"),
+  deactivatedBy: text("deactivated_by").references((): AnyPgColumn => user.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-});
+  },
+  (table) => [check("user_inactive_chk", sql`${table.isActive} OR ${table.deactivatedAt} IS NOT NULL`)],
+);
 
 export const session = pgTable(
   "session",
