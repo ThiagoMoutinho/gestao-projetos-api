@@ -1,3 +1,6 @@
+// Primeiro import: liga o modo de teste do banco (só conecta a um banco gp_test* autorizado; ver src/db/test-database-guard.ts).
+import "../db/force-test-mode";
+
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
