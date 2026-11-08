@@ -7,7 +7,7 @@ import {
   canCreateProject,
 } from "../projects.authorization";
 import type { ProjectRepos, TransactionRunner } from "../repositories/contracts";
-import { ownerNotFoundError } from "./shared";
+import { ownerNotFoundError, recordProjectInitialStatus } from "./shared";
 
 export function makeCreateProjectUseCase(deps: {
   repos: ProjectRepos;
@@ -48,6 +48,10 @@ export function makeCreateProjectUseCase(deps: {
       });
 
       await txRepos.members.ensureOwnerMembership(project.id, ownerId);
+      // Mesma transação do projeto: ou ambos são gravados ou nenhum.
+      if (project.status !== "NAO_INICIADO") {
+        await recordProjectInitialStatus(txRepos, { projectId: project.id, to: project.status, actorId: actor.id });
+      }
       return project;
     });
 

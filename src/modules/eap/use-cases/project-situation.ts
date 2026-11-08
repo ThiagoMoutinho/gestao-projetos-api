@@ -3,7 +3,8 @@ import type { EapMilestoneRow } from "../dtos/eap-milestones.dto";
 import type { EapPhaseRow } from "../dtos/eap-phases.dto";
 import type { EapTaskRow } from "../dtos/eap-tasks.dto";
 import type { EapRepos } from "../repositories/contracts";
-import { calculatedPhaseStatus, calculatedTaskStatus, civilDayKey } from "./eap-status";
+import { eapDelays } from "./eap-delay";
+import { calculatedPhaseStatus } from "./eap-status";
 
 export type ProjectSituationStatus =
   | "SUSPENSO"
@@ -38,12 +39,6 @@ export type ProjectSituation = {
 /** Limite de dias corridos: acima dele o atraso é crítico; de 1 até ele, atenção. */
 export const CRITICAL_DELAY_DAYS = 5;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function dayDiff(laterKey: string, earlierKey: string) {
-  return Math.round((Date.parse(`${laterKey}T00:00:00Z`) - Date.parse(`${earlierKey}T00:00:00Z`)) / DAY_MS);
-}
-
 /**
  * Situação automática do projeto, pela prioridade aprovada: Suspenso, Concluído, Crítico, Em atenção,
  * Em validação, Em execução e Não iniciado. Suspensão e encerramento só valem como decisão formal:
@@ -63,7 +58,6 @@ export function projectSituation(input: {
   deliveries: ReadonlyArray<Pick<EapMilestoneDeliveryRow, "milestoneId" | "submittedAt">>;
   now?: Date;
 }): ProjectSituation {
-  const today = civilDayKey(input.now ?? new Date());
   const latestChange = [...input.statusHistory].sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())[0];
   const decided = latestChange?.to === input.projectStatus ? latestChange.to : null;
   const formalDecision: ProjectSituation["formalDecision"] =
@@ -71,46 +65,11 @@ export function projectSituation(input: {
       ? { status: decided, decidedAt: latestChange.createdAt.toISOString() }
       : null;
 
-  const suspendedPhases = new Set(input.phases.filter((phase) => phase.status === "SUSPENSA").map((phase) => phase.id));
-  let delayDays = 0;
-  let delayedItems = 0;
-  let pendingValidation = 0;
-  let undatedDeliveries = 0;
-  const registerDelay = (days: number) => {
-    if (days > 0) {
-      delayDays = Math.max(delayDays, days);
-      delayedItems += 1;
-    }
-  };
-
-  for (const task of input.tasks) {
-    const status = calculatedTaskStatus(task);
-    if (suspendedPhases.has(task.phaseId) || status === "CONCLUIDA" || status === "CANCELADA" || !task.plannedEndAt) {
-      continue;
-    }
-    registerDelay(dayDiff(today, civilDayKey(task.plannedEndAt)));
-  }
-
-  for (const milestone of input.milestones) {
-    if (milestone.status === "ENTREGUE") {
-      pendingValidation += 1;
-    }
-    if (suspendedPhases.has(milestone.phaseId) || milestone.status === "APROVADO" || !milestone.plannedAt) {
-      continue;
-    }
-    const planned = civilDayKey(milestone.plannedAt);
-    if (milestone.status === "ENTREGUE") {
-      const delivered = latestDelivery(milestone, input.deliveries);
-      if (!delivered) {
-        undatedDeliveries += 1;
-        continue;
-      }
-      registerDelay(dayDiff(civilDayKey(delivered), planned));
-      continue;
-    }
-    // Pendente, rejeitado ou com ajustes solicitados: a entrega (ou a correção) cabe à execução.
-    registerDelay(dayDiff(today, planned));
-  }
+  // Atraso: regra única do sistema (eap-delay.ts), a mesma do Resumo executivo, do Planejamento e do monitoramento de prazos.
+  const delays = eapDelays({ phases: input.phases, tasks: input.tasks, milestones: input.milestones, deliveries: input.deliveries, now: input.now });
+  const { delayDays, undatedDeliveries } = delays;
+  const delayedItems = delays.items.length;
+  const pendingValidation = input.milestones.filter((milestone) => milestone.status === "ENTREGUE").length;
 
   const allPhasesConcluded =
     input.phases.length > 0 &&
@@ -174,14 +133,3 @@ export async function loadProjectSituation(repos: EapRepos, project: { id: strin
   });
 }
 
-/** Data da entrega em análise: a rodada mais recente; em marcos legados, a data efetiva gravada no envio. */
-function latestDelivery(
-  milestone: Pick<EapMilestoneRow, "id" | "actualAt">,
-  deliveries: ReadonlyArray<Pick<EapMilestoneDeliveryRow, "milestoneId" | "submittedAt">>,
-) {
-  const submitted = deliveries
-    .filter((delivery) => delivery.milestoneId === milestone.id && delivery.submittedAt)
-    .map((delivery) => delivery.submittedAt as Date)
-    .sort((left, right) => right.getTime() - left.getTime())[0];
-  return submitted ?? milestone.actualAt ?? null;
-}

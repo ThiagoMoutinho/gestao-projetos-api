@@ -93,6 +93,25 @@ export async function recordOwnerTransfer(
   });
 }
 
+/**
+ * Registra a situação com que o projeto foi criado (somente quando não é "Não iniciado"). É um registro de histórico:
+ * não prova, por si só, que a execução começou (um projeto criado suspenso, por exemplo, não iniciou).
+ */
+export async function recordProjectInitialStatus(
+  repos: ProjectRepos,
+  data: { projectId: string; to: string; actorId: string },
+) {
+  await repos.audit.create({
+    projectId: data.projectId,
+    entityType: "PROJECT",
+    entityId: data.projectId,
+    action: "STATUS_CHANGE",
+    summary: `Projeto criado com a situação ${data.to}.`,
+    payload: { automatic: false, kind: "INITIAL_STATUS", from: null, to: data.to },
+    actorId: data.actorId,
+  });
+}
+
 /** Registra a alteração manual da situação do projeto. */
 export async function recordProjectStatusChange(
   repos: ProjectRepos,

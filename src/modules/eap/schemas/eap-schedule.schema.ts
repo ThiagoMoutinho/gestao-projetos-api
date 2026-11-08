@@ -166,8 +166,35 @@ export const projectSituationSchema = z
   })
   .describe("Situação calculada pela EAP; a situação gravada no cadastro é preservada.");
 
+/** Situação do prazo do Planejamento: indicador independente da situação executiva do projeto. */
+export const deadlineSituationSchema = z
+  .object({
+    status: z
+      .enum(["CONCLUIDO", "ATRASADO", "EM_ATENCAO", "NO_PRAZO"])
+      .nullable()
+      .describe("Nula em projeto suspenso."),
+    hasDatedCommitments: z
+      .boolean()
+      .describe("Falso quando não há compromisso datado: No prazo, nesse caso, não indica prazo validado."),
+    overdueCommitments: z.number().int().describe("Itens em atraso pela regra única, mais o prazo final do projeto, se vencido."),
+    attentionItems: z
+      .array(
+        z.object({
+          entityType: z.enum(["TASK", "MILESTONE"]),
+          entityId: z.string(),
+          reason: z.enum(["ACTIVE_IMPEDIMENT", "NOT_STARTED_AFTER_PLANNED_START"]),
+        }),
+      )
+      .describe("Compromissos com vencimento na janela de atenção e indicador objetivo de risco."),
+    unevaluatedIndicators: z
+      .array(z.enum(["DEPENDENCIES", "FORMAL_RISKS"]))
+      .describe("Indicadores do critério sem registro no sistema: não foram avaliados."),
+  })
+  .describe("Situação do prazo calculada sobre as datas vigentes; reprogramações não entram no cálculo.");
+
 export const eapScheduleMonitoringSchema = z.object({
   situation: projectSituationSchema,
+  deadlineSituation: deadlineSituationSchema,
   project: z.object({
     baselineStartAt: z.string().nullable(),
     baselineEndAt: z.string().nullable(),

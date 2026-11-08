@@ -7,7 +7,9 @@ import {
   type EapScheduleMonitoringDto,
 } from "../dtos/eap-schedule.dto";
 import type { EapRepos } from "../repositories/contracts";
+import { deadlineSituation } from "./deadline-situation";
 import { calculatedPhaseStatus, calculatedTaskStatus, civilDayKey, deadlinePerformance } from "./eap-status";
+import { eapDelays, latestDelivery } from "./eap-delay";
 import { formalStatusHistory, projectSituation } from "./project-situation";
 import { assertCanView, loadProjectAccess, usesDeliveryRounds } from "./shared";
 
@@ -51,9 +53,23 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
     const today = civilDayKey(now);
     const isPast = (value: Date | null) => value !== null && civilDayKey(value) < today;
 
+    // Atraso de execução: regra única (eap-delay.ts), a mesma da Situação atual, do status do projeto e do Resumo executivo.
+    const delays = eapDelays({ phases, tasks, milestones, deliveries, now });
+
     const reschedules = scheduleEntries.filter(isRescheduleEntry).map(toEapScheduleChangeDto);
     const countFor = (entityType: string, entityId: string) =>
       reschedules.filter((entry) => entry.entityType === entityType && entry.entityId === entityId).length;
+
+    // Marco entregue é julgado pela data da entrega (no prazo ou fora dele), nunca por "hoje": entrega no prazo aguardando
+    // homologação não é atraso. Sem data de entrega conhecida não há como julgar.
+    const milestoneDeadlinePerformance = (milestone: (typeof milestones)[number]) => {
+      const base = { baselineEndAt: milestone.baselineAt, plannedEndAt: milestone.plannedAt };
+      if (milestone.status === "ENTREGUE") {
+        const delivered = latestDelivery(milestone, deliveries);
+        return delivered ? deadlinePerformance({ state: "OPEN", ...base, actualEndAt: null }, delivered) : null;
+      }
+      return deadlinePerformance({ state: milestone.status === "APROVADO" ? "DONE" : "OPEN", ...base, actualEndAt: milestone.actualAt }, now);
+    };
 
     const items: MonitoredItem[] = [
       ...phases.map((phase) => {
@@ -76,7 +92,8 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
           plannedEndAt: iso(phase.plannedEndAt),
           actualStartAt: iso(phase.actualStartAt),
           actualEndAt: iso(phase.actualEndAt),
-          overdue: status !== "CONCLUIDA" && isPast(phase.plannedEndAt),
+          // Fase não conta como item em atraso: o atraso é o de suas tarefas e marcos. O prazo da fase segue em `deadlinePerformance`.
+          overdue: false,
           deadlinePerformance: deadlinePerformance(
             {
               state: status === "CONCLUIDA" ? "DONE" : "OPEN",
@@ -106,7 +123,7 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
           plannedEndAt: iso(task.plannedEndAt),
           actualStartAt: iso(task.actualStartAt),
           actualEndAt: iso(task.actualEndAt),
-          overdue: status !== "CONCLUIDA" && status !== "CANCELADA" && isPast(task.plannedEndAt),
+          overdue: delays.isDelayed("TASK", task.id),
           deadlinePerformance: deadlinePerformance(
             {
               state: status === "CONCLUIDA" ? "DONE" : status === "CANCELADA" ? "CLOSED" : "OPEN",
@@ -134,16 +151,8 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
         plannedEndAt: iso(milestone.plannedAt),
         actualStartAt: null,
         actualEndAt: iso(milestone.actualAt),
-        overdue: milestone.status !== "APROVADO" && isPast(milestone.plannedAt),
-        deadlinePerformance: deadlinePerformance(
-          {
-            state: milestone.status === "APROVADO" ? "DONE" : "OPEN",
-            baselineEndAt: milestone.baselineAt,
-            plannedEndAt: milestone.plannedAt,
-            actualEndAt: milestone.actualAt,
-          },
-          now,
-        ),
+        overdue: delays.isDelayed("MILESTONE", milestone.id),
+        deadlinePerformance: milestoneDeadlinePerformance(milestone),
         rescheduleCount: countFor("MILESTONE", milestone.id),
         responsibleId:
           milestone.status === "ENTREGUE" ? milestone.reviewerId : (milestone.presenterId ?? milestone.deliveredBy),
@@ -232,6 +241,15 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
 
     return {
       situation,
+      deadlineSituation: deadlineSituation({
+        situationStatus: situation.status,
+        projectPlannedEndAt: project.plannedEndAt,
+        phases,
+        tasks,
+        milestones,
+        delays,
+        now,
+      }),
       project: {
         baselineStartAt: iso(project.baselineStartAt),
         baselineEndAt: iso(project.baselineEndAt),
@@ -250,9 +268,10 @@ export function makeGetScheduleMonitoringUseCase(deps: { repos: EapRepos }) {
         ).length,
       },
       overdue: {
-        phases: items.filter((item) => item.entityType === "PHASE" && item.overdue).length,
-        tasks: items.filter((item) => item.entityType === "TASK" && item.overdue).length,
-        milestones: items.filter((item) => item.entityType === "MILESTONE" && item.overdue).length,
+        // Sempre 0: fases não são contadas como itens em atraso (regra única). Mantido só por compatibilidade do contrato.
+        phases: 0,
+        tasks: delays.items.filter((item) => item.entityType === "TASK").length,
+        milestones: delays.items.filter((item) => item.entityType === "MILESTONE").length,
       },
       homologation: {
         awaiting: milestones.filter((milestone) => milestone.status === "ENTREGUE").length,

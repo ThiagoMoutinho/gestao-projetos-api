@@ -81,3 +81,32 @@ describe("CreateProject", () => {
     );
   });
 });
+
+describe("CreateProject: situação inicial", () => {
+  async function create(status?: "NAO_INICIADO" | "EM_EXECUCAO" | "SUSPENSO") {
+    const store = createInMemoryStore({ users: [makeUser({ id: "actor-1", role: "PMO", name: "PMO" })] });
+    const repos = makeInMemoryRepos(store);
+    const createProject = makeCreateProjectUseCase({ repos, runInTransaction: makeInMemoryTransactionRunner(repos) });
+    const project = await createProject(actor("PMO"), { name: "Projeto", ...(status ? { status } : {}) });
+    return { store, project };
+  }
+
+  it("não registra evento quando o projeto nasce não iniciado", async () => {
+    const { store } = await create();
+    assert.equal(store.audit.filter((row) => row.action === "STATUS_CHANGE").length, 0);
+    assert.equal((await create("NAO_INICIADO")).store.audit.length, 0);
+  });
+
+  it("registra a situação inicial, o responsável e o horário do servidor, uma única vez", async () => {
+    for (const status of ["EM_EXECUCAO", "SUSPENSO"] as const) {
+      const { store, project } = await create(status);
+      const entries = store.audit.filter((row) => row.action === "STATUS_CHANGE");
+      assert.equal(entries.length, 1);
+      assert.equal(entries[0].projectId, project.id);
+      assert.equal(entries[0].entityType, "PROJECT");
+      assert.equal(entries[0].actorId, "actor-1");
+      assert.ok(entries[0].createdAt instanceof Date);
+      assert.deepEqual(entries[0].payload, { automatic: false, kind: "INITIAL_STATUS", from: null, to: status });
+    }
+  });
+});
