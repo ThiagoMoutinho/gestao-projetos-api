@@ -18,6 +18,7 @@ import { makeEapRoutes } from "./modules/eap/eap.routes";
 import { makeEapModule } from "./modules/eap/factories/make-eap-controller";
 import { makeProjectsModule } from "./modules/projects/factories/make-projects-controller";
 import { makeBusinessCalendarModule, makeBusinessCalendarRoutes } from "./modules/business-calendar/business-calendar.routes";
+import { makeUserAdminModule, makeUserAdminRoutes } from "./modules/user-admin/user-admin.routes";
 import { makeInstitutionalModule } from "./modules/institutional/factories/make-institutional-module";
 import { makeInstitutionalRoutes } from "./modules/institutional/institutional.routes";
 import { makeOverviewLayoutModule, makeOverviewLayoutRoutes } from "./modules/overview-layout/overview-layout.routes";
@@ -168,6 +169,12 @@ export async function buildApp() {
         });
       }
 
+      if (session.user.isActive === false) {
+        return reply.status(401).send({
+          message: "Usuário inativo. Procure o administrador.",
+        });
+      }
+
       if (session.user.role !== "ADMIN") {
         return reply.status(403).send({
           message: "Você não tem permissão para acessar esta área.",
@@ -192,6 +199,7 @@ export async function buildApp() {
   await app.register(makeInstitutionalRoutes(institutionalController));
   await app.register(makeOverviewLayoutRoutes(makeOverviewLayoutModule(db)));
   await app.register(makeBusinessCalendarRoutes(makeBusinessCalendarModule(db)));
+  await app.register(makeUserAdminRoutes(makeUserAdminModule(db)));
 
   return app;
 }

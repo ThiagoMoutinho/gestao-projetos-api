@@ -31,6 +31,13 @@ function parseUserRole(role: unknown): UserRole {
   return "COLABORADOR";
 }
 
+/** Sessão de usuário desativado deixa de valer na hora (a leitura da sessão é feita no banco a cada requisição). */
+export function assertSessionUserActive(sessionUser: { isActive?: boolean | null }) {
+  if (sessionUser.isActive === false) {
+    throw new HttpError(401, "Usuário inativo. Procure o administrador.", "USER_INACTIVE");
+  }
+}
+
 export async function requireAuth(
   request: FastifyRequest,
   _reply: FastifyReply,
@@ -46,6 +53,8 @@ export async function requireAuth(
       "UNAUTHENTICATED",
     );
   }
+
+  assertSessionUserActive(session.user);
 
   request.authUser = {
     id: session.user.id,
