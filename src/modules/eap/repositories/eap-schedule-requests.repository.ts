@@ -1,8 +1,13 @@
 import { count, eq } from "drizzle-orm";
 
-import { eapScheduleRequests } from "../../../db/schema";
+import { eapScheduleChanges, eapScheduleRequests } from "../../../db/schema";
 import type { DbClient } from "../../../db/types";
-import type { EapScheduleRequestsRepository, ScheduleRequestTarget } from "./contracts";
+import type {
+  EapScheduleRequestsRepository,
+  ScheduleRequestChangeRow,
+  ScheduleRequestHistoryRow,
+  ScheduleRequestTarget,
+} from "./contracts";
 
 export class DrizzleEapScheduleRequestsRepository implements EapScheduleRequestsRepository {
   constructor(private readonly client: DbClient) {}
@@ -34,5 +39,43 @@ export class DrizzleEapScheduleRequestsRepository implements EapScheduleRequests
       .where(condition);
 
     return row?.total ?? 0;
+  }
+
+  async listByProject(projectId: string): Promise<ScheduleRequestHistoryRow[]> {
+    const rows = await this.client
+      .select({
+        id: eapScheduleRequests.id,
+        phaseId: eapScheduleRequests.phaseId,
+        taskId: eapScheduleRequests.taskId,
+        milestoneId: eapScheduleRequests.milestoneId,
+        field: eapScheduleRequests.field,
+        baselineValue: eapScheduleRequests.baselineValue,
+        expectedCurrentValue: eapScheduleRequests.expectedCurrentValue,
+        proposedValue: eapScheduleRequests.proposedValue,
+        justification: eapScheduleRequests.justification,
+        status: eapScheduleRequests.status,
+        requestedBy: eapScheduleRequests.requestedBy,
+        requestedAt: eapScheduleRequests.requestedAt,
+        reviewedBy: eapScheduleRequests.reviewedBy,
+        reviewedAt: eapScheduleRequests.reviewedAt,
+        decisionNote: eapScheduleRequests.decisionNote,
+      })
+      .from(eapScheduleRequests)
+      .where(eq(eapScheduleRequests.projectId, projectId));
+
+    return rows;
+  }
+
+  async listChangesByProject(projectId: string): Promise<ScheduleRequestChangeRow[]> {
+    return this.client
+      .select({
+        requestId: eapScheduleChanges.requestId,
+        field: eapScheduleChanges.field,
+        oldValue: eapScheduleChanges.oldValue,
+        newValue: eapScheduleChanges.newValue,
+        createdAt: eapScheduleChanges.createdAt,
+      })
+      .from(eapScheduleChanges)
+      .where(eq(eapScheduleChanges.projectId, projectId));
   }
 }

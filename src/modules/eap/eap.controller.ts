@@ -45,11 +45,15 @@ import type { ValidateExecutiveSummaryInput } from "./use-cases/executive-summar
 import type {
   EapScheduleChangeDto,
   EapScheduleMonitoringDto,
+  ListProjectReschedulesQuery,
   ListScheduleChangesQuery,
   RescheduleMilestoneInput,
   RescheduleRangeInput,
 } from "./dtos/eap-schedule.dto";
 import type { ReorderMilestoneItem } from "./use-cases/reorder-milestones";
+import type { makeListProjectReschedulesUseCase } from "./use-cases/list-project-reschedules";
+import type { makeListScheduleHistoryUseCase } from "./use-cases/list-schedule-history";
+import type { ListScheduleHistoryQuery } from "./schemas/eap-schedule-history.schema";
 import type { RescheduleTarget } from "./use-cases/reschedule";
 import type { ReorderTaskItem } from "./use-cases/reorder-tasks";
 import type {
@@ -257,6 +261,16 @@ type EapPhaseUseCases = {
     projectId: string,
     query: ListScheduleChangesQuery,
   ) => Promise<{ data: EapScheduleChangeDto[] }>;
+  listScheduleHistory: (
+    actor: AuthUser,
+    projectId: string,
+    query: ListScheduleHistoryQuery,
+  ) => ReturnType<ReturnType<typeof makeListScheduleHistoryUseCase>>;
+  listProjectReschedules: (
+    actor: AuthUser,
+    projectId: string,
+    query: ListProjectReschedulesQuery,
+  ) => ReturnType<ReturnType<typeof makeListProjectReschedulesUseCase>>;
   getScheduleMonitoring: (actor: AuthUser, projectId: string) => Promise<EapScheduleMonitoringDto>;
   getExecutiveSummary: (actor: AuthUser, projectId: string) => Promise<ExecutiveSummaryDto>;
   validateExecutiveSummary: (
@@ -797,6 +811,18 @@ export function makeEapController(useCases: EapPhaseUseCases) {
       request: FastifyRequest<{ Params: { id: string }; Querystring: ListScheduleChangesQuery }>,
     ) {
       return useCases.listScheduleChanges(getAuthUser(request), request.params.id, request.query);
+    },
+
+    async listScheduleHistory(
+      request: FastifyRequest<{ Params: { id: string }; Querystring: ListScheduleHistoryQuery }>,
+    ) {
+      return useCases.listScheduleHistory(getAuthUser(request), request.params.id, request.query);
+    },
+
+    async listProjectReschedules(
+      request: FastifyRequest<{ Params: { id: string }; Querystring: ListProjectReschedulesQuery }>,
+    ) {
+      return useCases.listProjectReschedules(getAuthUser(request), request.params.id, request.query);
     },
 
     async getScheduleMonitoring(request: FastifyRequest<{ Params: { id: string } }>) {

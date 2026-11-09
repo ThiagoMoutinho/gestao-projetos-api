@@ -53,11 +53,14 @@ import {
   eapScheduleChangeListResponseSchema,
   eapScheduleChangeSchema,
   eapScheduleMonitoringSchema,
+  listProjectReschedulesQuerySchema,
   listScheduleChangesQuerySchema,
+  projectReschedulesResponseSchema,
   rescheduleMilestoneBodySchema,
   rescheduleRangeBodySchema,
   scheduleErrorResponses,
 } from "./schemas/eap-schedule.schema";
+import { listScheduleHistoryQuerySchema, scheduleHistoryResponseSchema } from "./schemas/eap-schedule-history.schema";
 import {
   executiveSummaryValidationDetailSchema,
   executiveSummaryValidationItemSchema,
@@ -882,6 +885,46 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
         },
       },
       (request) => controller.listScheduleChanges(request),
+    );
+
+    app.get(
+      "/projects/:id/schedule-history",
+      {
+        schema: {
+          operationId: "listScheduleHistory",
+          tags: ["Cronograma"],
+          summary: "Histórico unificado do cronograma: reprogramações, solicitações e definições iniciais",
+          description:
+            "Somente leitura. Registros anteriores ao fluxo de solicitação aparecem como LEGACY_DIRECT, sem solicitante, aprovador ou categoria.",
+          security: [{ cookieAuth: [] }],
+          params: projectIdParamsSchema,
+          querystring: listScheduleHistoryQuerySchema,
+          response: {
+            200: scheduleHistoryResponseSchema,
+            ...scheduleErrorResponses,
+          },
+        },
+      },
+      (request) => controller.listScheduleHistory(request),
+    );
+
+    app.get(
+      "/projects/:id/reschedules",
+      {
+        schema: {
+          operationId: "listProjectReschedules",
+          tags: ["Cronograma"],
+          summary: "Reprogramações efetivadas do projeto, da mais recente para a mais antiga",
+          security: [{ cookieAuth: [] }],
+          params: projectIdParamsSchema,
+          querystring: listProjectReschedulesQuerySchema,
+          response: {
+            200: projectReschedulesResponseSchema,
+            ...scheduleErrorResponses,
+          },
+        },
+      },
+      (request) => controller.listProjectReschedules(request),
     );
 
     app.get(

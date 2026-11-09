@@ -305,7 +305,37 @@ export interface EapImpedimentsRepository {
 export interface EapScheduleRequestsRepository {
   findById(id: string): Promise<{ id: string; projectId: string } | null>;
   countByTarget(target: ScheduleRequestTarget): Promise<number>;
+  /** Todas as solicitações do projeto (somente leitura), de qualquer situação. */
+  listByProject(projectId: string): Promise<ScheduleRequestHistoryRow[]>;
+  /** Mudanças aplicadas por solicitações aprovadas (somente leitura). */
+  listChangesByProject(projectId: string): Promise<ScheduleRequestChangeRow[]>;
 }
+
+export type ScheduleRequestHistoryRow = {
+  id: string;
+  phaseId: string | null;
+  taskId: string | null;
+  milestoneId: string | null;
+  field: "PLANNED_START_AT" | "PLANNED_END_AT" | "PLANNED_AT";
+  baselineValue: Date | null;
+  expectedCurrentValue: Date | null;
+  proposedValue: Date;
+  justification: string;
+  status: "PENDENTE" | "APROVADA" | "REJEITADA" | "CANCELADA" | "CANCELADA_CONFLITO";
+  requestedBy: string;
+  requestedAt: Date;
+  reviewedBy: string | null;
+  reviewedAt: Date | null;
+  decisionNote: string | null;
+};
+
+export type ScheduleRequestChangeRow = {
+  requestId: string;
+  field: "PLANNED_START_AT" | "PLANNED_END_AT" | "PLANNED_AT";
+  oldValue: Date | null;
+  newValue: Date;
+  createdAt: Date;
+};
 
 export type ScheduleRequestTarget =
   | { phaseId: string }

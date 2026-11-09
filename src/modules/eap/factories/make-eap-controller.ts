@@ -37,6 +37,8 @@ import { loadBusinessCalendar } from "../../business-calendar/business-calendar.
 import { makeGetExecutiveSummaryUseCase } from "../use-cases/get-executive-summary";
 import { makeGetScheduleMonitoringUseCase } from "../use-cases/get-schedule-monitoring";
 import { makeListAuditUseCase } from "../use-cases/list-audit";
+import { makeListProjectReschedulesUseCase } from "../use-cases/list-project-reschedules";
+import { makeListScheduleHistoryUseCase } from "../use-cases/list-schedule-history";
 import { makeListScheduleChangesUseCase } from "../use-cases/list-schedule-changes";
 import { makeRescheduleUseCase } from "../use-cases/reschedule";
 import { makeListEvidencesUseCase } from "../use-cases/list-evidences";
@@ -122,6 +124,8 @@ export function makeEapModule(database: Database) {
     listAudit: makeListAuditUseCase(deps),
     reschedule: makeRescheduleUseCase(deps),
     listScheduleChanges: makeListScheduleChangesUseCase(deps),
+    listProjectReschedules: makeListProjectReschedulesUseCase(deps),
+    listScheduleHistory: makeListScheduleHistoryUseCase(deps),
     getScheduleMonitoring: makeGetScheduleMonitoringUseCase(deps),
     getExecutiveSummary: makeGetExecutiveSummaryUseCase({
       ...deps,

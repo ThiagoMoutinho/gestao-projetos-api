@@ -47,6 +47,8 @@ import type {
   NewEapMilestoneRecord,
   NewEapPhaseRecord,
   NewEapTaskRecord,
+  ScheduleRequestChangeRow,
+  ScheduleRequestHistoryRow,
   ScheduleRequestTarget,
 } from "../repositories/contracts";
 
@@ -56,6 +58,9 @@ export type EapScheduleRequestRef = {
   phaseId?: string | null;
   taskId?: string | null;
   milestoneId?: string | null;
+  /** Campos opcionais usados só pelos testes do histórico (leitura de solicitações). */
+  history?: Omit<ScheduleRequestHistoryRow, "id" | "phaseId" | "taskId" | "milestoneId">;
+  change?: Omit<ScheduleRequestChangeRow, "requestId">;
 };
 
 export type EapInMemoryStore = ProjectStore & {
@@ -542,6 +547,24 @@ class InMemoryEapScheduleRequestsRepository implements EapScheduleRequestsReposi
           ? row.taskId === target.taskId
           : row.milestoneId === target.milestoneId,
     ).length;
+  }
+
+  async listByProject(projectId: string): Promise<ScheduleRequestHistoryRow[]> {
+    return this.store.scheduleRequests
+      .filter((row) => row.projectId === projectId && row.history)
+      .map((row) => ({
+        id: row.id,
+        phaseId: row.phaseId ?? null,
+        taskId: row.taskId ?? null,
+        milestoneId: row.milestoneId ?? null,
+        ...(row.history as NonNullable<EapScheduleRequestRef["history"]>),
+      }));
+  }
+
+  async listChangesByProject(projectId: string): Promise<ScheduleRequestChangeRow[]> {
+    return this.store.scheduleRequests
+      .filter((row) => row.projectId === projectId && row.change)
+      .map((row) => ({ requestId: row.id, ...(row.change as NonNullable<EapScheduleRequestRef["change"]>) }));
   }
 }
 

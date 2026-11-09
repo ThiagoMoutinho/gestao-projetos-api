@@ -29,6 +29,11 @@ export type ListScheduleChangesQuery = {
   entityId: string;
 };
 
+export type ListProjectReschedulesQuery = {
+  /** Sem limite, devolve o histórico completo. */
+  limit?: number;
+};
+
 export type EapScheduleImpactCode = z.infer<typeof eapScheduleImpactCodeSchema>;
 export type EapScheduleImpact = { code: EapScheduleImpactCode; message: string };
 export type EapScheduleChangeDto = z.infer<typeof eapScheduleChangeSchema>;

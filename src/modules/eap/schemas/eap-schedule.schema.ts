@@ -52,6 +52,12 @@ export const listScheduleChangesQuerySchema = z
   })
   .strict();
 
+export const listProjectReschedulesQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(500).optional().describe("Sem limite, devolve o histórico completo."),
+  })
+  .strict();
+
 export const eapScheduleImpactCodeSchema = z.enum([
   "PHASE_START_PRECEDED",
   "PHASE_END_EXCEEDED",
@@ -102,6 +108,16 @@ export const eapScheduleChangeSchema = z.object({
 
 export const eapScheduleChangeListResponseSchema = z.object({
   data: z.array(eapScheduleChangeSchema),
+});
+
+export const projectReschedulesResponseSchema = z.object({
+  total: z.number().int().describe("Reprogramações efetivadas do projeto (a primeira definição de datas não conta)."),
+  lastAt: z.string().nullable().describe("Data da reprogramação mais recente."),
+  data: z.array(
+    eapScheduleChangeSchema.extend({
+      entityTitle: z.string().nullable().describe("Nome do item alterado; nulo no projeto ou se o item foi excluído."),
+    }),
+  ),
 });
 
 const monitoredItemSchema = z.object({
