@@ -291,3 +291,11 @@ export function canUpdateEapTaskProgress(
 function isAssignedTo(context: ProjectAccessContext, assigneeId: string | null): boolean {
   return assigneeId != null && assigneeId === context.userId;
 }
+
+/**
+ * Valida o resumo executivo do projeto: somente o perfil global PMO. ADMIN, COORDENADOR, gestão e fornecedores
+ * consultam, mas não validam (nenhuma permissão automática por outro perfil).
+ */
+export function canValidateExecutiveSummary(context: ProjectAccessContext): boolean {
+  return context.globalRole === "PMO";
+}

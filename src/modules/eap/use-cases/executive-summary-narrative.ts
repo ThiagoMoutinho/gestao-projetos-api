@@ -1,8 +1,8 @@
 import type { EapAuditEntryDto } from "../dtos/eap-audit.dto";
 import type { EapScheduleMonitoringDto } from "../dtos/eap-schedule.dto";
-import type { ExecutiveSummaryDto } from "../schemas/eap-executive-summary.schema";
+import type { ExecutiveSummarySnapshotDto } from "../schemas/eap-executive-summary.schema";
 
-type SituationStatus = ExecutiveSummaryDto["situation"]["status"];
+type SituationStatus = ExecutiveSummarySnapshotDto["situation"]["status"];
 
 /** Mesmos rótulos exibidos na tela (project-status.ts do frontend). */
 export const SITUATION_LABEL: Record<SituationStatus, string> = {
@@ -40,6 +40,9 @@ const RELEVANT_KINDS = new Set<string>([
   "OWNER_TRANSFERRED",
 ]);
 
+/** Entradas de governança (projeto, participantes e perfil institucional): só aparecem para quem pode consultá-las. */
+export const GOVERNANCE_ENTITY_TYPES = new Set(["PROJECT", "PROJECT_MEMBER", "PROJECT_PROFILE", "PROJECT_RESULT", "PROJECT_HIGHLIGHT", "PROJECT_EXECUTIVE_SUMMARY"]);
+
 export function relevantMovements(entries: ReadonlyArray<EapAuditEntryDto>) {
   return entries
     .filter((entry) => RELEVANT_KINDS.has(entry.details.kind))
@@ -51,6 +54,7 @@ export function relevantMovements(entries: ReadonlyArray<EapAuditEntryDto>) {
       kind: entry.details.kind,
       automatic: entry.details.automatic,
       summary: entry.summary,
+      governance: GOVERNANCE_ENTITY_TYPES.has(entry.entityType),
     }));
 }
 
@@ -94,7 +98,7 @@ function formatPercent(basisPoints: number) {
  * Narrativa objetiva: uma frase por indicador, com modelos fixos. Só repete números e datas já calculados;
  * não explica causas, riscos nem impactos.
  */
-export function buildNarrative(summary: Omit<ExecutiveSummaryDto, "narrative">) {
+export function buildNarrative(summary: Omit<ExecutiveSummarySnapshotDto, "narrative">) {
   if (!summary.hasData) {
     return [
       {
@@ -128,7 +132,7 @@ export function buildNarrative(summary: Omit<ExecutiveSummaryDto, "narrative">) 
     text:
       overdue.total === 0
         ? "Nenhum item em atraso."
-        : `${overdue.total} ${plural(overdue.total, "item em atraso", "itens em atraso")}: ${overdue.phases} ${plural(overdue.phases, "fase", "fases")}, ${overdue.tasks} ${plural(overdue.tasks, "tarefa", "tarefas")} e ${overdue.milestones} ${plural(overdue.milestones, "marco", "marcos")}.`,
+        : `${overdue.total} ${plural(overdue.total, "item em atraso", "itens em atraso")}: ${overdue.tasks} ${plural(overdue.tasks, "tarefa", "tarefas")} e ${overdue.milestones} ${plural(overdue.milestones, "marco", "marcos")}.`,
   });
 
   lines.push({

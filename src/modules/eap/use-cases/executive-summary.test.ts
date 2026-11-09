@@ -152,7 +152,7 @@ describe("Resumo executivo automático", () => {
 
     assert.equal(byKey.situation, "Situação atual: Crítico, com o maior atraso em 12 dias.");
     assert.equal(byKey.progress, "Progresso consolidado: 73,3% (2 de 3 fases calculadas).");
-    assert.equal(byKey.overdue, "3 itens em atraso: 0 fases, 2 tarefas e 1 marco.");
+    assert.equal(byKey.overdue, "3 itens em atraso: 2 tarefas e 1 marco.");
     assert.equal(byKey.impediments, "Nenhum impedimento registrado.");
     assert.equal(byKey.reschedules, "2 reprogramações registradas, 1 escalonada ao PMO.");
     assert.equal(byKey.homologation, "2 entregas aguardando homologação e 1 em correção.");

@@ -14,7 +14,7 @@ import {
 
 const DEFAULT_LIMIT = 50;
 
-const INSTITUTIONAL_ENTITY_TYPES = new Set<ListAuditQuery["entityType"]>(["PROJECT_PROFILE", "PROJECT_RESULT", "PROJECT_HIGHLIGHT"]);
+const INSTITUTIONAL_ENTITY_TYPES = new Set<ListAuditQuery["entityType"]>(["PROJECT_PROFILE", "PROJECT_RESULT", "PROJECT_HIGHLIGHT", "PROJECT_EXECUTIVE_SUMMARY"]);
 const GOVERNANCE_ENTITY_TYPES = new Set<ListAuditQuery["entityType"]>(["PROJECT", "PROJECT_MEMBER", ...INSTITUTIONAL_ENTITY_TYPES]);
 
 async function assertEntityInProject(repos: EapRepos, projectId: string, query: ListAuditQuery) {

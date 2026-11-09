@@ -36,7 +36,12 @@ import type {
   ReviewMilestoneInput,
   UpdateMilestoneInput,
 } from "./dtos/eap-milestones.dto";
-import type { ExecutiveSummaryDto } from "./schemas/eap-executive-summary.schema";
+import type {
+  ExecutiveSummaryDto,
+  ExecutiveSummarySnapshotDto,
+  ExecutiveSummaryValidationItemDto,
+} from "./schemas/eap-executive-summary.schema";
+import type { ValidateExecutiveSummaryInput } from "./use-cases/executive-summary-validations";
 import type {
   EapScheduleChangeDto,
   EapScheduleMonitoringDto,
@@ -254,6 +259,21 @@ type EapPhaseUseCases = {
   ) => Promise<{ data: EapScheduleChangeDto[] }>;
   getScheduleMonitoring: (actor: AuthUser, projectId: string) => Promise<EapScheduleMonitoringDto>;
   getExecutiveSummary: (actor: AuthUser, projectId: string) => Promise<ExecutiveSummaryDto>;
+  validateExecutiveSummary: (
+    actor: AuthUser,
+    projectId: string,
+    input: ValidateExecutiveSummaryInput,
+  ) => Promise<ExecutiveSummaryValidationItemDto>;
+  listExecutiveSummaryValidations: (
+    actor: AuthUser,
+    projectId: string,
+    query: { limit?: number },
+  ) => Promise<{ data: ExecutiveSummaryValidationItemDto[] }>;
+  getExecutiveSummaryValidation: (
+    actor: AuthUser,
+    projectId: string,
+    validationId: string,
+  ) => Promise<ExecutiveSummaryValidationItemDto & { snapshot: ExecutiveSummarySnapshotDto }>;
   deletePhase: (actor: AuthUser, projectId: string, phaseId: string) => Promise<void>;
   deleteTask: (
     actor: AuthUser,
@@ -785,6 +805,22 @@ export function makeEapController(useCases: EapPhaseUseCases) {
 
     async getExecutiveSummary(request: FastifyRequest<{ Params: { id: string } }>) {
       return useCases.getExecutiveSummary(getAuthUser(request), request.params.id);
+    },
+
+    async validateExecutiveSummary(
+      request: FastifyRequest<{ Params: { id: string }; Body: ValidateExecutiveSummaryInput }>,
+      reply: FastifyReply,
+    ) {
+      const validation = await useCases.validateExecutiveSummary(getAuthUser(request), request.params.id, request.body);
+      return reply.status(201).send(validation);
+    },
+
+    async listExecutiveSummaryValidations(request: FastifyRequest<{ Params: { id: string }; Querystring: { limit?: number } }>) {
+      return useCases.listExecutiveSummaryValidations(getAuthUser(request), request.params.id, request.query);
+    },
+
+    async getExecutiveSummaryValidation(request: FastifyRequest<{ Params: { id: string; validationId: string } }>) {
+      return useCases.getExecutiveSummaryValidation(getAuthUser(request), request.params.id, request.params.validationId);
     },
   };
 }

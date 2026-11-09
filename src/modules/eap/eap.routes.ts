@@ -58,7 +58,15 @@ import {
   rescheduleRangeBodySchema,
   scheduleErrorResponses,
 } from "./schemas/eap-schedule.schema";
-import { executiveSummarySchema } from "./schemas/eap-executive-summary.schema";
+import {
+  executiveSummaryValidationDetailSchema,
+  executiveSummaryValidationItemSchema,
+  executiveSummaryValidationListSchema,
+  executiveSummaryValidationParamsSchema,
+  executiveSummarySchema,
+  listExecutiveSummaryValidationsQuerySchema,
+  validateExecutiveSummaryBodySchema,
+} from "./schemas/eap-executive-summary.schema";
 import {
   createTaskBodySchema,
   eapTaskListResponseSchema,
@@ -910,6 +918,62 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
         },
       },
       (request) => controller.getExecutiveSummary(request),
+    );
+
+    app.post(
+      "/projects/:id/executive-summary/validations",
+      {
+        schema: {
+          operationId: "validateExecutiveSummary",
+          tags: ["Cronograma"],
+          summary: "Valida o resumo executivo (somente PMO): grava o snapshot, o ciclo e a auditoria",
+          security: [{ cookieAuth: [] }],
+          params: projectIdParamsSchema,
+          body: validateExecutiveSummaryBodySchema,
+          response: {
+            201: executiveSummaryValidationItemSchema,
+            ...scheduleErrorResponses,
+          },
+        },
+      },
+      (request, reply) => controller.validateExecutiveSummary(request, reply),
+    );
+
+    app.get(
+      "/projects/:id/executive-summary/validations",
+      {
+        schema: {
+          operationId: "listExecutiveSummaryValidations",
+          tags: ["Cronograma"],
+          summary: "Histórico de validações do resumo executivo",
+          security: [{ cookieAuth: [] }],
+          params: projectIdParamsSchema,
+          querystring: listExecutiveSummaryValidationsQuerySchema,
+          response: {
+            200: executiveSummaryValidationListSchema,
+            ...scheduleErrorResponses,
+          },
+        },
+      },
+      (request) => controller.listExecutiveSummaryValidations(request),
+    );
+
+    app.get(
+      "/projects/:id/executive-summary/validations/:validationId",
+      {
+        schema: {
+          operationId: "getExecutiveSummaryValidation",
+          tags: ["Cronograma"],
+          summary: "Snapshot de uma validação do resumo executivo (somente leitura)",
+          security: [{ cookieAuth: [] }],
+          params: executiveSummaryValidationParamsSchema,
+          response: {
+            200: executiveSummaryValidationDetailSchema,
+            ...scheduleErrorResponses,
+          },
+        },
+      },
+      (request) => controller.getExecutiveSummaryValidation(request),
     );
   };
 }

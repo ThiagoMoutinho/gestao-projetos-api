@@ -5,6 +5,7 @@ import { DrizzleUsersRepository } from "../../projects/repositories/users.reposi
 import { makeEapController } from "../eap.controller";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import { DrizzleEapAuditRepository } from "../repositories/eap-audit.repository";
+import { DrizzleEapExecutiveSummariesRepository } from "../repositories/eap-executive-summaries.repository";
 import { DrizzleEapEvidencesRepository } from "../repositories/eap-evidences.repository";
 import { DrizzleEapImpedimentsRepository } from "../repositories/eap-impediments.repository";
 import { DrizzleEapMilestoneDeliveriesRepository } from "../repositories/eap-milestone-deliveries.repository";
@@ -26,6 +27,13 @@ import { makeGetEvidenceUseCase } from "../use-cases/get-evidence";
 import { makeGetMilestoneUseCase } from "../use-cases/get-milestone";
 import { makeGetPhaseUseCase } from "../use-cases/get-phase";
 import { makeGetTaskUseCase } from "../use-cases/get-task";
+import {
+  makeGetExecutiveSummaryValidationUseCase,
+  makeListExecutiveSummaryValidationsUseCase,
+  makeValidateExecutiveSummaryUseCase,
+} from "../use-cases/executive-summary-validations";
+import { DrizzleCalendarRepository } from "../../business-calendar/business-calendar.repository";
+import { loadBusinessCalendar } from "../../business-calendar/business-calendar.use-cases";
 import { makeGetExecutiveSummaryUseCase } from "../use-cases/get-executive-summary";
 import { makeGetScheduleMonitoringUseCase } from "../use-cases/get-schedule-monitoring";
 import { makeListAuditUseCase } from "../use-cases/list-audit";
@@ -66,6 +74,7 @@ export function makeEapRepos(client: DbClient): EapRepos {
     impediments: new DrizzleEapImpedimentsRepository(client),
     evidences: new DrizzleEapEvidencesRepository(client),
     audit: new DrizzleEapAuditRepository(client),
+    executiveSummaries: new DrizzleEapExecutiveSummariesRepository(client),
   };
 }
 
@@ -114,7 +123,13 @@ export function makeEapModule(database: Database) {
     reschedule: makeRescheduleUseCase(deps),
     listScheduleChanges: makeListScheduleChangesUseCase(deps),
     getScheduleMonitoring: makeGetScheduleMonitoringUseCase(deps),
-    getExecutiveSummary: makeGetExecutiveSummaryUseCase(deps),
+    getExecutiveSummary: makeGetExecutiveSummaryUseCase({
+      ...deps,
+      loadCalendar: (from, to) => loadBusinessCalendar(new DrizzleCalendarRepository(database), from, to),
+    }),
+    validateExecutiveSummary: makeValidateExecutiveSummaryUseCase(deps),
+    listExecutiveSummaryValidations: makeListExecutiveSummaryValidationsUseCase(deps),
+    getExecutiveSummaryValidation: makeGetExecutiveSummaryValidationUseCase(deps),
     deletePhase: makeDeletePhaseUseCase(deps),
     deleteTask: makeDeleteTaskUseCase(deps),
     deleteMilestone: makeDeleteMilestoneUseCase(deps),

@@ -12,6 +12,7 @@ export const eapAuditEntityTypeSchema = z.enum([
   "PROJECT_PROFILE",
   "PROJECT_RESULT",
   "PROJECT_HIGHLIGHT",
+  "PROJECT_EXECUTIVE_SUMMARY",
 ]);
 
 export type EapAuditEntityType = z.infer<typeof eapAuditEntityTypeSchema>;

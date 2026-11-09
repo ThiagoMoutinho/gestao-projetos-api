@@ -16,11 +16,15 @@ import type { EapMilestoneDeliveryRow } from "../dtos/eap-milestone-deliveries.d
 import type { EapAuditLogRow, EapPhaseRow } from "../dtos/eap-phases.dto";
 import type { EapMilestoneRow } from "../dtos/eap-milestones.dto";
 import type { EapTaskRow } from "../dtos/eap-tasks.dto";
+import { ExecutiveSummaryRegularConflictError } from "../repositories/contracts";
 import type {
   EapAuditActionFilter,
   EapAuditEntityFilter,
   EapAuditRepository,
   EapEvidencesRepository,
+  EapExecutiveSummariesRepository,
+  ExecutiveSummaryValidationRow,
+  NewExecutiveSummaryValidationRecord,
   EapEvidenceUpdateRecord,
   EapImpedimentsRepository,
   EapImpedimentUpdateRecord,
@@ -63,6 +67,7 @@ export type EapInMemoryStore = ProjectStore & {
   impediments: EapImpedimentRow[];
   evidences: EapEvidenceRow[];
   auditLogs: EapAuditLogRow[];
+  executiveSummaries: ExecutiveSummaryValidationRow[];
 };
 
 export function createEapInMemoryStore(
@@ -81,6 +86,7 @@ export function createEapInMemoryStore(
     impediments: seed?.impediments ?? [],
     evidences: seed?.evidences ?? [],
     auditLogs: seed?.auditLogs ?? [],
+    executiveSummaries: seed?.executiveSummaries ?? [],
   };
 }
 
@@ -774,6 +780,50 @@ class InMemoryEapAuditRepository implements EapAuditRepository {
   }
 }
 
+class InMemoryEapExecutiveSummariesRepository implements EapExecutiveSummariesRepository {
+  constructor(private readonly store: EapInMemoryStore) {}
+
+  private withName(row: ExecutiveSummaryValidationRow | undefined) {
+    return row ? { ...row, validatedByName: this.store.users.find((item) => item.id === row.validatedBy)?.name ?? null } : null;
+  }
+
+  async create(data: NewExecutiveSummaryValidationRecord) {
+    if (
+      data.kind === "REGULAR" &&
+      this.store.executiveSummaries.some((row) => row.projectId === data.projectId && row.cycleStart === data.cycleStart && row.kind === "REGULAR")
+    ) {
+      throw new ExecutiveSummaryRegularConflictError();
+    }
+    const row = { snapshotVersion: 1, ...data, validatedAt: new Date() } as ExecutiveSummaryValidationRow;
+    this.store.executiveSummaries.push(row);
+    return this.withName(row) as ExecutiveSummaryValidationRow;
+  }
+
+  async findLatestByProject(projectId: string) {
+    const rows = this.store.executiveSummaries.filter((row) => row.projectId === projectId);
+    return this.withName(rows.at(-1));
+  }
+
+  async findRegularInCycle(projectId: string, cycleStart: string) {
+    return this.withName(
+      this.store.executiveSummaries.find((row) => row.projectId === projectId && row.cycleStart === cycleStart && row.kind === "REGULAR"),
+    );
+  }
+
+  async listByProject(projectId: string, limit: number) {
+    return this.store.executiveSummaries
+      .filter((row) => row.projectId === projectId)
+      .slice()
+      .reverse()
+      .slice(0, limit)
+      .map((row) => this.withName(row) as ExecutiveSummaryValidationRow);
+  }
+
+  async findByIdAndProject(validationId: string, projectId: string) {
+    return this.withName(this.store.executiveSummaries.find((row) => row.id === validationId && row.projectId === projectId));
+  }
+}
+
 export function makeEapInMemoryRepos(store: EapInMemoryStore): EapRepos {
   const projectRepos = makeInMemoryRepos(store);
 
@@ -789,6 +839,7 @@ export function makeEapInMemoryRepos(store: EapInMemoryStore): EapRepos {
     impediments: new InMemoryEapImpedimentsRepository(store),
     evidences: new InMemoryEapEvidencesRepository(store),
     audit: new InMemoryEapAuditRepository(store),
+    executiveSummaries: new InMemoryEapExecutiveSummariesRepository(store),
   };
 }
 
@@ -806,6 +857,7 @@ function cloneStore(store: EapInMemoryStore): EapInMemoryStore {
     impediments: store.impediments.map((row) => ({ ...row })),
     evidences: store.evidences.map((row) => ({ ...row })),
     auditLogs: store.auditLogs.map((row) => ({ ...row })),
+    executiveSummaries: store.executiveSummaries.map((row) => ({ ...row })),
   };
 }
 
@@ -822,6 +874,7 @@ function restoreStore(store: EapInMemoryStore, snapshot: EapInMemoryStore) {
   store.impediments.splice(0, store.impediments.length, ...snapshot.impediments);
   store.evidences.splice(0, store.evidences.length, ...snapshot.evidences);
   store.auditLogs.splice(0, store.auditLogs.length, ...snapshot.auditLogs);
+  store.executiveSummaries.splice(0, store.executiveSummaries.length, ...snapshot.executiveSummaries);
 }
 
 export function makeEapInMemoryTransactionRunner(

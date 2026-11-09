@@ -1,4 +1,4 @@
-import type { eapAuditActionEnum } from "../../../db/schema";
+import type { eapAuditActionEnum, projectExecutiveSummaryValidations } from "../../../db/schema";
 import type {
   ProjectMembersRepository,
   ProjectsRepository,
@@ -343,6 +343,34 @@ export type EapAuditEntityFilter = {
 
 export type EapAuditEntryRow = EapAuditLogRow & { actorName: string | null };
 
+export type ExecutiveSummaryValidationRow = typeof projectExecutiveSummaryValidations.$inferSelect & { validatedByName: string | null };
+
+export type NewExecutiveSummaryValidationRecord = {
+  id: string;
+  projectId: string;
+  cycleStart: string;
+  cycleEnd: string;
+  kind: "REGULAR" | "EXTRAORDINARY";
+  snapshot: Record<string, unknown>;
+  snapshotVersion?: number;
+  fingerprint: string;
+  unchanged: boolean;
+  observation: string | null;
+  validatedBy: string;
+};
+
+/** Já existe validação regular do projeto neste ciclo (inclui duas solicitações simultâneas). */
+export class ExecutiveSummaryRegularConflictError extends Error {}
+
+/** Histórico de validações do resumo executivo: só inserção e leitura (o banco bloqueia alteração e exclusão). */
+export interface EapExecutiveSummariesRepository {
+  create(data: NewExecutiveSummaryValidationRecord): Promise<ExecutiveSummaryValidationRow>;
+  findLatestByProject(projectId: string): Promise<ExecutiveSummaryValidationRow | null>;
+  findRegularInCycle(projectId: string, cycleStart: string): Promise<ExecutiveSummaryValidationRow | null>;
+  listByProject(projectId: string, limit: number): Promise<ExecutiveSummaryValidationRow[]>;
+  findByIdAndProject(validationId: string, projectId: string): Promise<ExecutiveSummaryValidationRow | null>;
+}
+
 export type EapRepos = {
   projects: ProjectsRepository;
   members: ProjectMembersRepository;
@@ -355,6 +383,7 @@ export type EapRepos = {
   impediments: EapImpedimentsRepository;
   evidences: EapEvidencesRepository;
   audit: EapAuditRepository;
+  executiveSummaries: EapExecutiveSummariesRepository;
 };
 
 export type EapTransactionRunner = <T>(fn: (repos: EapRepos) => Promise<T>) => Promise<T>;
