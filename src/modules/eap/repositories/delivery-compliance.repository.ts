@@ -1,9 +1,12 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 
 import {
   deliveryChecklistTemplateItems,
   deliveryChecklistTemplateRevisions,
   deliveryChecklistTemplates,
+  eapMilestoneDeliveries,
+  projectDeliveryVersionItems,
+  projectDeliveryVersions,
 } from "../../../db/schema";
 import type { DbClient } from "../../../db/types";
 import type {
@@ -11,8 +14,11 @@ import type {
   ChecklistRevisionWithItems,
   ChecklistTemplateItemRow,
   ChecklistTemplateRow,
+  CreateDeliveryVersionInput,
   DeliveryComplianceRepository,
   DeliveryNature,
+  DeliveryVersionItemRow,
+  DeliveryVersionRow,
   SaveChecklistDraftInput,
 } from "./delivery-compliance.contract";
 
@@ -32,6 +38,18 @@ function toRevision({ revision, nature }: RevisionJoin): ChecklistRevisionRow {
     createdAt: revision.createdAt,
     publishedBy: revision.publishedBy,
     publishedAt: revision.publishedAt,
+  };
+}
+
+function toVersion(row: typeof projectDeliveryVersions.$inferSelect): DeliveryVersionRow {
+  return { ...row, nature: row.nature as DeliveryNature };
+}
+
+function toVersionItem(row: typeof projectDeliveryVersionItems.$inferSelect): DeliveryVersionItemRow {
+  return {
+    ...row,
+    status: row.status as DeliveryVersionItemRow["status"],
+    evidenceKind: row.evidenceKind as DeliveryVersionItemRow["evidenceKind"],
   };
 }
 
@@ -151,5 +169,85 @@ export class DrizzleDeliveryComplianceRepository implements DeliveryComplianceRe
       .set({ status: "PUBLICADA", publishedBy: actorId, publishedAt: now })
       .where(and(eq(deliveryChecklistTemplateRevisions.id, draft.id), eq(deliveryChecklistTemplateRevisions.status, "RASCUNHO")));
     return this.getRevision(draft.id);
+  }
+
+  async listVersions(projectId: string) {
+    const rows = await this.client
+      .select()
+      .from(projectDeliveryVersions)
+      .where(eq(projectDeliveryVersions.projectId, projectId))
+      .orderBy(desc(projectDeliveryVersions.createdAt), desc(projectDeliveryVersions.versionLabel));
+    return rows.map(toVersion);
+  }
+
+  async getVersion(versionId: string) {
+    const [row] = await this.client.select().from(projectDeliveryVersions).where(eq(projectDeliveryVersions.id, versionId)).limit(1);
+    return row ? toVersion(row) : null;
+  }
+
+  async findVersionByLabel(projectId: string, versionLabel: string) {
+    const [row] = await this.client
+      .select()
+      .from(projectDeliveryVersions)
+      .where(and(eq(projectDeliveryVersions.projectId, projectId), eq(projectDeliveryVersions.versionLabel, versionLabel)))
+      .limit(1);
+    return row ? toVersion(row) : null;
+  }
+
+  async createVersion(input: CreateDeliveryVersionInput) {
+    const id = crypto.randomUUID();
+    const [version] = await this.client
+      .insert(projectDeliveryVersions)
+      .values({
+        id,
+        projectId: input.projectId,
+        versionLabel: input.versionLabel,
+        nature: input.nature,
+        templateRevisionId: input.revision.id,
+        notes: input.notes,
+        createdBy: input.createdBy,
+        createdAt: input.now,
+      })
+      .returning();
+    const items = input.revision.items.length
+      ? await this.client
+          .insert(projectDeliveryVersionItems)
+          .values(
+            input.revision.items.map((item) => ({
+              id: crypto.randomUUID(),
+              versionId: id,
+              templateItemId: item.id,
+              position: item.position,
+              documentType: item.documentType,
+              title: item.title,
+              description: item.description,
+              required: item.required,
+              createdAt: input.now,
+              updatedAt: input.now,
+            })),
+          )
+          .returning()
+      : [];
+    return { version: toVersion(version), items: items.map(toVersionItem).sort((left, right) => left.position - right.position) };
+  }
+
+  async listItems(versionIds: string[]) {
+    if (versionIds.length === 0) return [];
+    const rows = await this.client
+      .select()
+      .from(projectDeliveryVersionItems)
+      .where(inArray(projectDeliveryVersionItems.versionId, versionIds))
+      .orderBy(asc(projectDeliveryVersionItems.versionId), asc(projectDeliveryVersionItems.position));
+    return rows.map(toVersionItem);
+  }
+
+  async countRoundsByVersion(versionIds: string[]) {
+    if (versionIds.length === 0) return {};
+    const rows = await this.client
+      .select({ versionId: eapMilestoneDeliveries.deliveryVersionId, total: count() })
+      .from(eapMilestoneDeliveries)
+      .where(inArray(eapMilestoneDeliveries.deliveryVersionId, versionIds))
+      .groupBy(eapMilestoneDeliveries.deliveryVersionId);
+    return Object.fromEntries(rows.flatMap((row) => (row.versionId ? [[row.versionId, row.total]] : [])));
   }
 }

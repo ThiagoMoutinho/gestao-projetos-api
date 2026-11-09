@@ -304,3 +304,19 @@ export function canValidateExecutiveSummary(context: ProjectAccessContext): bool
 export function canManageDeliveryTemplates(globalRole: string): boolean {
   return globalRole === "ADMIN" || globalRole === "PMO";
 }
+
+const DELIVERY_SUBMITTER_ROLES = ["DONO_PROJETO", "GESTOR", "FORNECEDOR", "PO", "DESENVOLVEDOR", "RESPONSAVEL_TECNICO"] as const;
+
+/**
+ * Cria versões de entrega e envia documentos da Conformidade de Entrega: dono, gestor, fornecedor, PO, desenvolvedores e
+ * responsável técnico vinculados ao projeto. ADMIN, PMO e coordenação acompanham, mas não enviam (separação de funções).
+ */
+export function canSubmitDeliveryDocuments(context: ProjectAccessContext): boolean {
+  if (!canViewProject(context)) {
+    return false;
+  }
+  return (
+    isProjectOwner(context.userId, context.ownerId) ||
+    context.memberRoles.some((role) => (DELIVERY_SUBMITTER_ROLES as readonly string[]).includes(role))
+  );
+}

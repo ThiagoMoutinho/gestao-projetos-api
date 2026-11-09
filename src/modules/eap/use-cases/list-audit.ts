@@ -15,6 +15,8 @@ import {
 const DEFAULT_LIMIT = 50;
 
 const INSTITUTIONAL_ENTITY_TYPES = new Set<ListAuditQuery["entityType"]>(["PROJECT_PROFILE", "PROJECT_RESULT", "PROJECT_HIGHLIGHT", "PROJECT_EXECUTIVE_SUMMARY"]);
+/** Conformidade de Entrega: consulta restrita ao projeto, sem entidade da EAP a validar. */
+const DELIVERY_ENTITY_TYPES = new Set<ListAuditQuery["entityType"]>(["DELIVERY_VERSION", "DELIVERY_ITEM"]);
 const GOVERNANCE_ENTITY_TYPES = new Set<ListAuditQuery["entityType"]>(["PROJECT", "PROJECT_MEMBER", ...INSTITUTIONAL_ENTITY_TYPES]);
 
 async function assertEntityInProject(repos: EapRepos, projectId: string, query: ListAuditQuery) {
@@ -27,7 +29,7 @@ async function assertEntityInProject(repos: EapRepos, projectId: string, query: 
 
   // Participantes removidos deixam de existir, mas o histórico continua consultável;
   // a consulta é sempre restrita aos registros do próprio projeto.
-  if (query.entityType === "PROJECT_MEMBER" || INSTITUTIONAL_ENTITY_TYPES.has(query.entityType)) {
+  if (query.entityType === "PROJECT_MEMBER" || INSTITUTIONAL_ENTITY_TYPES.has(query.entityType) || DELIVERY_ENTITY_TYPES.has(query.entityType)) {
     return;
   }
 

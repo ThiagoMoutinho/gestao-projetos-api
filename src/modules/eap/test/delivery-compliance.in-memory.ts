@@ -3,8 +3,11 @@ import type {
   ChecklistRevisionWithItems,
   ChecklistTemplateItemRow,
   ChecklistTemplateRow,
+  CreateDeliveryVersionInput,
   DeliveryComplianceRepository,
   DeliveryNature,
+  DeliveryVersionItemRow,
+  DeliveryVersionRow,
   SaveChecklistDraftInput,
 } from "../repositories/delivery-compliance.contract";
 
@@ -13,6 +16,10 @@ export type DeliveryComplianceState = {
   templates: ChecklistTemplateRow[];
   revisions: ChecklistRevisionRow[];
   items: ChecklistTemplateItemRow[];
+  versions: DeliveryVersionRow[];
+  versionItems: DeliveryVersionItemRow[];
+  /** Rodadas ligadas a versões (deliveryVersionId); preenchido pelos testes de homologação. */
+  roundsByVersion: Record<string, number>;
 };
 
 const NAMES: Record<DeliveryNature, string> = {
@@ -24,9 +31,16 @@ const NAMES: Record<DeliveryNature, string> = {
 /** Modelos publicados (revisão 1) com poucos itens: três obrigatórios e um opcional por natureza. */
 export function createDeliveryComplianceState(seed?: Partial<DeliveryComplianceState>): DeliveryComplianceState {
   if (seed?.templates) {
-    return { templates: seed.templates, revisions: seed.revisions ?? [], items: seed.items ?? [] };
+    return {
+      templates: seed.templates,
+      revisions: seed.revisions ?? [],
+      items: seed.items ?? [],
+      versions: seed.versions ?? [],
+      versionItems: seed.versionItems ?? [],
+      roundsByVersion: seed.roundsByVersion ?? {},
+    };
   }
-  const state: DeliveryComplianceState = { templates: [], revisions: [], items: [] };
+  const state: DeliveryComplianceState = { templates: [], revisions: [], items: [], versions: [], versionItems: [], roundsByVersion: {} };
   for (const nature of Object.keys(NAMES) as DeliveryNature[]) {
     const key = nature.toLowerCase();
     state.templates.push({ id: `tpl-${key}`, nature, name: NAMES[nature] });
@@ -62,6 +76,9 @@ export function cloneDeliveryComplianceState(state: DeliveryComplianceState): De
     templates: state.templates.map((row) => ({ ...row })),
     revisions: state.revisions.map((row) => ({ ...row })),
     items: state.items.map((row) => ({ ...row })),
+    versions: state.versions.map((row) => ({ ...row })),
+    versionItems: state.versionItems.map((row) => ({ ...row })),
+    roundsByVersion: { ...state.roundsByVersion },
   };
 }
 
@@ -69,6 +86,9 @@ export function restoreDeliveryComplianceState(target: DeliveryComplianceState, 
   target.templates.splice(0, target.templates.length, ...snapshot.templates);
   target.revisions.splice(0, target.revisions.length, ...snapshot.revisions);
   target.items.splice(0, target.items.length, ...snapshot.items);
+  target.versions.splice(0, target.versions.length, ...snapshot.versions);
+  target.versionItems.splice(0, target.versionItems.length, ...snapshot.versionItems);
+  target.roundsByVersion = { ...snapshot.roundsByVersion };
 }
 
 export class InMemoryDeliveryComplianceRepository implements DeliveryComplianceRepository {
@@ -142,5 +162,65 @@ export class InMemoryDeliveryComplianceRepository implements DeliveryComplianceR
     draft.publishedBy = actorId;
     draft.publishedAt = now;
     return this.withItems(draft);
+  }
+
+  async listVersions(projectId: string) {
+    return this.state.versions
+      .filter((row) => row.projectId === projectId)
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime() || right.versionLabel.localeCompare(left.versionLabel));
+  }
+
+  async getVersion(versionId: string) {
+    return this.state.versions.find((row) => row.id === versionId) ?? null;
+  }
+
+  async findVersionByLabel(projectId: string, versionLabel: string) {
+    return this.state.versions.find((row) => row.projectId === projectId && row.versionLabel === versionLabel) ?? null;
+  }
+
+  async createVersion(input: CreateDeliveryVersionInput) {
+    const version: DeliveryVersionRow = {
+      id: crypto.randomUUID(),
+      projectId: input.projectId,
+      versionLabel: input.versionLabel,
+      nature: input.nature,
+      templateRevisionId: input.revision.id,
+      notes: input.notes,
+      createdBy: input.createdBy,
+      createdAt: input.now,
+    };
+    this.state.versions.push(version);
+    const items: DeliveryVersionItemRow[] = input.revision.items.map((item) => ({
+      id: crypto.randomUUID(),
+      versionId: version.id,
+      templateItemId: item.id,
+      position: item.position,
+      documentType: item.documentType,
+      title: item.title,
+      description: item.description,
+      required: item.required,
+      status: "PENDENTE",
+      evidenceKind: null,
+      evidenceRef: null,
+      submittedBy: null,
+      submittedAt: null,
+      validatorId: null,
+      decidedBy: null,
+      decidedAt: null,
+      decisionNote: null,
+    }));
+    this.state.versionItems.push(...items);
+    return { version, items: items.map((item) => ({ ...item })) };
+  }
+
+  async listItems(versionIds: string[]) {
+    return this.state.versionItems
+      .filter((item) => versionIds.includes(item.versionId))
+      .sort((left, right) => left.versionId.localeCompare(right.versionId) || left.position - right.position)
+      .map((item) => ({ ...item }));
+  }
+
+  async countRoundsByVersion(versionIds: string[]) {
+    return Object.fromEntries(versionIds.map((id) => [id, this.state.roundsByVersion[id] ?? 0]));
   }
 }
