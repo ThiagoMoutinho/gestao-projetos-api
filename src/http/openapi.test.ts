@@ -19,6 +19,18 @@ const EMAIL = `pmo${EMAIL_SUFFIX}`;
 const PASSWORD = "Ficticio@Cors20";
 
 const BUSINESS_OPERATION_IDS = [
+  "listDeliveryChecklistTemplates",
+  "saveDeliveryChecklistDraft",
+  "publishDeliveryChecklistDraft",
+  "listDeliveryVersions",
+  "getDeliveryVersion",
+  "createDeliveryVersion",
+  "submitDeliveryItem",
+  "approveDeliveryItem",
+  "rejectDeliveryItem",
+  "waiveDeliveryItem",
+  "assignDeliveryItemValidator",
+  "listDeliveryItemEvents",
   "createProject",
   "listProjects",
   "listMyProjects",
