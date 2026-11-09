@@ -218,6 +218,20 @@
       "when": 1793539256165,
       "tag": "0030_notification_scheduler",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794240685969,
+      "tag": "0031_delivery_compliance",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794240711405,
+      "tag": "0032_delivery_checklist_seed",
+      "breakpoints": true
     }
   ]
 }

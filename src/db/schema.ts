@@ -3,6 +3,7 @@ import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export * from "./schema/auth-schema";
 export * from "./schema/business-calendar";
+export * from "./schema/delivery-compliance";
 export * from "./schema/eap";
 export * from "./schema/executive-summary";
 export * from "./schema/notifications";

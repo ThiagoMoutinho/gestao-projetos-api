@@ -200,6 +200,8 @@ export type NewEapMilestoneDeliveryRecord = {
   submittedBy: string;
   submittedAt: Date | null;
   note: string | null;
+  /** Versão lógica do produto avaliada nesta rodada (Conformidade de Entrega). */
+  deliveryVersionId?: string | null;
 };
 
 export type EapMilestoneDeliveryDecisionRecord = {

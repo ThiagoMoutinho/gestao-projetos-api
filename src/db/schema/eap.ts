@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { user } from "./auth-schema";
+import { projectDeliveryVersions } from "./delivery-compliance";
 import { projectResults } from "./project-profile";
 import { projects } from "./projects";
 
@@ -317,10 +318,13 @@ export const eapMilestoneDeliveries = pgTable(
     resubmissionAuthorizedBy: text("resubmission_authorized_by").references(() => user.id),
     resubmissionAuthorizedAt: timestamp("resubmission_authorized_at"),
     resubmissionNote: text("resubmission_note"),
+    /** Versão lógica do produto avaliada nesta rodada (Conformidade de Entrega); várias rodadas podem avaliar a mesma versão. */
+    deliveryVersionId: text("delivery_version_id").references(() => projectDeliveryVersions.id, { onDelete: "restrict" }),
   },
   (table) => [
     unique("eap_milestone_deliveries_round_unique").on(table.milestoneId, table.round),
     index("eap_milestone_deliveries_milestone_id_idx").on(table.milestoneId),
+    index("eap_milestone_deliveries_version_idx").on(table.deliveryVersionId),
     uniqueIndex("eap_milestone_deliveries_open_idx")
       .on(table.milestoneId)
       .where(sql`${table.status} = 'EM_ANALISE'`),

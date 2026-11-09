@@ -502,6 +502,7 @@ class InMemoryEapMilestoneDeliveriesRepository implements EapMilestoneDeliveries
       resubmissionAuthorizedBy: null,
       resubmissionAuthorizedAt: null,
       resubmissionNote: null,
+      deliveryVersionId: data.deliveryVersionId ?? null,
     };
     this.store.deliveries.push(row);
     return row;
