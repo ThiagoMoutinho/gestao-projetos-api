@@ -91,6 +91,35 @@ export type DeliveryVersionItemRow = {
   decisionNote: string | null;
 };
 
+export const DELIVERY_EVENT_ACTIONS = ["ENVIO", "APROVACAO", "REJEICAO", "DISPENSA"] as const;
+export type DeliveryEventAction = (typeof DELIVERY_EVENT_ACTIONS)[number];
+
+/** Histórico de envio e validação de um item: só recebe registros novos. */
+export type DeliveryItemEventRow = {
+  id: string;
+  itemId: string;
+  action: DeliveryEventAction;
+  actorId: string;
+  evidenceKind: DeliveryEvidenceKind | null;
+  evidenceRef: string | null;
+  note: string | null;
+  createdAt: Date;
+};
+
+export type SubmitDeliveryItemInput = {
+  evidenceKind: DeliveryEvidenceKind;
+  evidenceRef: string;
+  submittedBy: string;
+  submittedAt: Date;
+};
+
+export type DecideDeliveryItemInput = {
+  status: "APROVADO" | "REJEITADO" | "DISPENSADO";
+  decidedBy: string;
+  decidedAt: Date;
+  decisionNote: string | null;
+};
+
 export type CreateDeliveryVersionInput = {
   projectId: string;
   versionLabel: string;
@@ -123,4 +152,14 @@ export interface DeliveryComplianceRepository {
   listItems(versionIds: string[]): Promise<DeliveryVersionItemRow[]>;
   /** Quantidade de rodadas de avaliação (eap_milestone_deliveries) ligadas a cada versão. */
   countRoundsByVersion(versionIds: string[]): Promise<Record<string, number>>;
+
+  getItem(itemId: string): Promise<DeliveryVersionItemRow | null>;
+  /** Registra o envio (item pendente ou rejeitado vira ENVIADO). Devolve null se a situação não permitir. */
+  submitItem(itemId: string, data: SubmitDeliveryItemInput): Promise<DeliveryVersionItemRow | null>;
+  /** Aprovação e rejeição só partem de ENVIADO; a dispensa parte de qualquer situação ainda não decidida. */
+  decideItem(itemId: string, data: DecideDeliveryItemInput): Promise<DeliveryVersionItemRow | null>;
+  setItemValidator(itemId: string, validatorId: string | null): Promise<DeliveryVersionItemRow | null>;
+  addItemEvent(event: DeliveryItemEventRow): Promise<void>;
+  /** Histórico do item, do mais antigo ao mais recente. */
+  listItemEvents(itemId: string): Promise<DeliveryItemEventRow[]>;
 }

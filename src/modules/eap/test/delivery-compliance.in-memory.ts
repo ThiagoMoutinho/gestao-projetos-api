@@ -4,11 +4,14 @@ import type {
   ChecklistTemplateItemRow,
   ChecklistTemplateRow,
   CreateDeliveryVersionInput,
+  DecideDeliveryItemInput,
   DeliveryComplianceRepository,
+  DeliveryItemEventRow,
   DeliveryNature,
   DeliveryVersionItemRow,
   DeliveryVersionRow,
   SaveChecklistDraftInput,
+  SubmitDeliveryItemInput,
 } from "../repositories/delivery-compliance.contract";
 
 /** Estado em memória da Conformidade de Entrega, usado pelos testes (com os modelos iniciais já publicados). */
@@ -18,6 +21,7 @@ export type DeliveryComplianceState = {
   items: ChecklistTemplateItemRow[];
   versions: DeliveryVersionRow[];
   versionItems: DeliveryVersionItemRow[];
+  itemEvents: DeliveryItemEventRow[];
   /** Rodadas ligadas a versões (deliveryVersionId); preenchido pelos testes de homologação. */
   roundsByVersion: Record<string, number>;
 };
@@ -37,10 +41,11 @@ export function createDeliveryComplianceState(seed?: Partial<DeliveryComplianceS
       items: seed.items ?? [],
       versions: seed.versions ?? [],
       versionItems: seed.versionItems ?? [],
+      itemEvents: seed.itemEvents ?? [],
       roundsByVersion: seed.roundsByVersion ?? {},
     };
   }
-  const state: DeliveryComplianceState = { templates: [], revisions: [], items: [], versions: [], versionItems: [], roundsByVersion: {} };
+  const state: DeliveryComplianceState = { templates: [], revisions: [], items: [], versions: [], versionItems: [], itemEvents: [], roundsByVersion: {} };
   for (const nature of Object.keys(NAMES) as DeliveryNature[]) {
     const key = nature.toLowerCase();
     state.templates.push({ id: `tpl-${key}`, nature, name: NAMES[nature] });
@@ -78,6 +83,7 @@ export function cloneDeliveryComplianceState(state: DeliveryComplianceState): De
     items: state.items.map((row) => ({ ...row })),
     versions: state.versions.map((row) => ({ ...row })),
     versionItems: state.versionItems.map((row) => ({ ...row })),
+    itemEvents: state.itemEvents.map((row) => ({ ...row })),
     roundsByVersion: { ...state.roundsByVersion },
   };
 }
@@ -88,6 +94,7 @@ export function restoreDeliveryComplianceState(target: DeliveryComplianceState, 
   target.items.splice(0, target.items.length, ...snapshot.items);
   target.versions.splice(0, target.versions.length, ...snapshot.versions);
   target.versionItems.splice(0, target.versionItems.length, ...snapshot.versionItems);
+  target.itemEvents.splice(0, target.itemEvents.length, ...snapshot.itemEvents);
   target.roundsByVersion = { ...snapshot.roundsByVersion };
 }
 
@@ -222,5 +229,56 @@ export class InMemoryDeliveryComplianceRepository implements DeliveryComplianceR
 
   async countRoundsByVersion(versionIds: string[]) {
     return Object.fromEntries(versionIds.map((id) => [id, this.state.roundsByVersion[id] ?? 0]));
+  }
+
+  async getItem(itemId: string) {
+    const item = this.state.versionItems.find((row) => row.id === itemId);
+    return item ? { ...item } : null;
+  }
+
+  async submitItem(itemId: string, data: SubmitDeliveryItemInput) {
+    const item = this.state.versionItems.find((row) => row.id === itemId);
+    if (!item || (item.status !== "PENDENTE" && item.status !== "REJEITADO")) return null;
+    Object.assign(item, {
+      status: "ENVIADO",
+      evidenceKind: data.evidenceKind,
+      evidenceRef: data.evidenceRef,
+      submittedBy: data.submittedBy,
+      submittedAt: data.submittedAt,
+      decidedBy: null,
+      decidedAt: null,
+      decisionNote: null,
+    });
+    return { ...item };
+  }
+
+  async decideItem(itemId: string, data: DecideDeliveryItemInput) {
+    const item = this.state.versionItems.find((row) => row.id === itemId);
+    const allowed = data.status === "DISPENSADO" ? ["PENDENTE", "ENVIADO", "REJEITADO"] : ["ENVIADO"];
+    if (!item || !allowed.includes(item.status)) return null;
+    // Espelha as restrições do banco: quem enviou não valida o próprio envio.
+    if (data.status === "APROVADO" && item.submittedBy === data.decidedBy) {
+      throw new Error("delivery_item_self_approval_chk");
+    }
+    Object.assign(item, { status: data.status, decidedBy: data.decidedBy, decidedAt: data.decidedAt, decisionNote: data.decisionNote });
+    return { ...item };
+  }
+
+  async setItemValidator(itemId: string, validatorId: string | null) {
+    const item = this.state.versionItems.find((row) => row.id === itemId);
+    if (!item) return null;
+    item.validatorId = validatorId;
+    return { ...item };
+  }
+
+  async addItemEvent(event: DeliveryItemEventRow) {
+    this.state.itemEvents.push({ ...event });
+  }
+
+  async listItemEvents(itemId: string) {
+    return this.state.itemEvents
+      .filter((event) => event.itemId === itemId)
+      .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
+      .map((event) => ({ ...event }));
   }
 }

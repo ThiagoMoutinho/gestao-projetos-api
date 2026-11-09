@@ -5,6 +5,7 @@ import {
   deliveryChecklistTemplateRevisions,
   deliveryChecklistTemplates,
   eapMilestoneDeliveries,
+  projectDeliveryItemEvents,
   projectDeliveryVersionItems,
   projectDeliveryVersions,
 } from "../../../db/schema";
@@ -15,11 +16,14 @@ import type {
   ChecklistTemplateItemRow,
   ChecklistTemplateRow,
   CreateDeliveryVersionInput,
+  DecideDeliveryItemInput,
   DeliveryComplianceRepository,
+  DeliveryItemEventRow,
   DeliveryNature,
   DeliveryVersionItemRow,
   DeliveryVersionRow,
   SaveChecklistDraftInput,
+  SubmitDeliveryItemInput,
 } from "./delivery-compliance.contract";
 
 type RevisionJoin = { revision: typeof deliveryChecklistTemplateRevisions.$inferSelect; nature: string };
@@ -249,5 +253,71 @@ export class DrizzleDeliveryComplianceRepository implements DeliveryComplianceRe
       .where(inArray(eapMilestoneDeliveries.deliveryVersionId, versionIds))
       .groupBy(eapMilestoneDeliveries.deliveryVersionId);
     return Object.fromEntries(rows.flatMap((row) => (row.versionId ? [[row.versionId, row.total]] : [])));
+  }
+
+  async getItem(itemId: string) {
+    const [row] = await this.client.select().from(projectDeliveryVersionItems).where(eq(projectDeliveryVersionItems.id, itemId)).limit(1);
+    return row ? toVersionItem(row) : null;
+  }
+
+  async submitItem(itemId: string, data: SubmitDeliveryItemInput) {
+    const [row] = await this.client
+      .update(projectDeliveryVersionItems)
+      .set({
+        status: "ENVIADO",
+        evidenceKind: data.evidenceKind,
+        evidenceRef: data.evidenceRef,
+        submittedBy: data.submittedBy,
+        submittedAt: data.submittedAt,
+        decidedBy: null,
+        decidedAt: null,
+        decisionNote: null,
+        updatedAt: data.submittedAt,
+      })
+      .where(and(eq(projectDeliveryVersionItems.id, itemId), inArray(projectDeliveryVersionItems.status, ["PENDENTE", "REJEITADO"])))
+      .returning();
+    return row ? toVersionItem(row) : null;
+  }
+
+  async decideItem(itemId: string, data: DecideDeliveryItemInput) {
+    const allowed = data.status === "DISPENSADO" ? ["PENDENTE", "ENVIADO", "REJEITADO"] : ["ENVIADO"];
+    const [row] = await this.client
+      .update(projectDeliveryVersionItems)
+      .set({
+        status: data.status,
+        decidedBy: data.decidedBy,
+        decidedAt: data.decidedAt,
+        decisionNote: data.decisionNote,
+        updatedAt: data.decidedAt,
+      })
+      .where(and(eq(projectDeliveryVersionItems.id, itemId), inArray(projectDeliveryVersionItems.status, allowed)))
+      .returning();
+    return row ? toVersionItem(row) : null;
+  }
+
+  async setItemValidator(itemId: string, validatorId: string | null) {
+    const [row] = await this.client
+      .update(projectDeliveryVersionItems)
+      .set({ validatorId })
+      .where(eq(projectDeliveryVersionItems.id, itemId))
+      .returning();
+    return row ? toVersionItem(row) : null;
+  }
+
+  async addItemEvent(event: DeliveryItemEventRow) {
+    await this.client.insert(projectDeliveryItemEvents).values({ ...event });
+  }
+
+  async listItemEvents(itemId: string) {
+    const rows = await this.client
+      .select()
+      .from(projectDeliveryItemEvents)
+      .where(eq(projectDeliveryItemEvents.itemId, itemId))
+      .orderBy(asc(projectDeliveryItemEvents.createdAt), asc(projectDeliveryItemEvents.id));
+    return rows.map((row) => ({
+      ...row,
+      action: row.action as DeliveryItemEventRow["action"],
+      evidenceKind: row.evidenceKind as DeliveryItemEventRow["evidenceKind"],
+    }));
   }
 }

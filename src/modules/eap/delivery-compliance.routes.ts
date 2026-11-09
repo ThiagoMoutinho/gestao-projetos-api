@@ -8,15 +8,22 @@ import {
   checklistRevisionSchema,
   checklistTemplateListSchema,
   complianceErrorResponses,
+  approveDeliveryItemBodySchema,
+  assignDeliveryValidatorBodySchema,
   createDeliveryVersionBodySchema,
+  deliveryItemEventListSchema,
   deliveryVersionListSchema,
   deliveryVersionSchema,
+  itemParamsSchema,
   natureParamsSchema,
+  reasonDeliveryItemBodySchema,
   saveChecklistDraftBodySchema,
+  submitDeliveryItemBodySchema,
   versionParamsSchema,
 } from "./schemas/eap-delivery-compliance.schema";
 import { projectIdParamsSchema } from "./schemas/eap-phases.schema";
 import { makeDeliveryChecklistTemplateUseCases } from "./use-cases/delivery-checklist-templates";
+import { makeDeliveryItemUseCases } from "./use-cases/delivery-items";
 import { makeDeliveryVersionUseCases } from "./use-cases/delivery-versions";
 
 const tags = ["Conformidade de Entrega"];
@@ -27,7 +34,7 @@ export function makeDeliveryComplianceModule(database: Database) {
   const repos = makeEapRepos(database);
   const runInTransaction: EapTransactionRunner = (fn) => database.transaction((tx) => fn(makeEapRepos(tx)));
   const deps = { repos, runInTransaction };
-  return { templates: makeDeliveryChecklistTemplateUseCases(deps), versions: makeDeliveryVersionUseCases(deps) };
+  return { templates: makeDeliveryChecklistTemplateUseCases(deps), versions: makeDeliveryVersionUseCases(deps), items: makeDeliveryItemUseCases(deps) };
 }
 
 export type DeliveryComplianceModule = ReturnType<typeof makeDeliveryComplianceModule>;
@@ -128,6 +135,101 @@ export function makeDeliveryComplianceRoutes(module: DeliveryComplianceModule): 
         const version = await module.versions.createVersion(getAuthUser(request), request.params.id, request.body);
         return reply.status(201).send(version);
       },
+    );
+
+    app.post(
+      "/projects/:id/delivery-versions/:versionId/items/:itemId/submit",
+      {
+        schema: {
+          operationId: "submitDeliveryItem",
+          tags,
+          summary: "Envia o documento do item (link do SharePoint ou tag/release do GitLab)",
+          security,
+          params: itemParamsSchema,
+          body: submitDeliveryItemBodySchema,
+          response: { 200: deliveryVersionSchema, ...complianceErrorResponses },
+        },
+      },
+      (request) => module.items.submitItem(getAuthUser(request), request.params.id, request.params.versionId, request.params.itemId, request.body),
+    );
+
+    app.post(
+      "/projects/:id/delivery-versions/:versionId/items/:itemId/approve",
+      {
+        schema: {
+          operationId: "approveDeliveryItem",
+          tags,
+          summary: "Aprova o documento (responsável técnico designado; não o autor do envio)",
+          security,
+          params: itemParamsSchema,
+          body: approveDeliveryItemBodySchema,
+          response: { 200: deliveryVersionSchema, ...complianceErrorResponses },
+        },
+      },
+      (request) => module.items.approveItem(getAuthUser(request), request.params.id, request.params.versionId, request.params.itemId, request.body),
+    );
+
+    app.post(
+      "/projects/:id/delivery-versions/:versionId/items/:itemId/reject",
+      {
+        schema: {
+          operationId: "rejectDeliveryItem",
+          tags,
+          summary: "Rejeita o documento, com justificativa",
+          security,
+          params: itemParamsSchema,
+          body: reasonDeliveryItemBodySchema,
+          response: { 200: deliveryVersionSchema, ...complianceErrorResponses },
+        },
+      },
+      (request) => module.items.rejectItem(getAuthUser(request), request.params.id, request.params.versionId, request.params.itemId, request.body),
+    );
+
+    app.post(
+      "/projects/:id/delivery-versions/:versionId/items/:itemId/waive",
+      {
+        schema: {
+          operationId: "waiveDeliveryItem",
+          tags,
+          summary: "Dispensa o documento, com justificativa formal (PMO)",
+          security,
+          params: itemParamsSchema,
+          body: reasonDeliveryItemBodySchema,
+          response: { 200: deliveryVersionSchema, ...complianceErrorResponses },
+        },
+      },
+      (request) => module.items.waiveItem(getAuthUser(request), request.params.id, request.params.versionId, request.params.itemId, request.body),
+    );
+
+    app.put(
+      "/projects/:id/delivery-versions/:versionId/items/:itemId/validator",
+      {
+        schema: {
+          operationId: "assignDeliveryItemValidator",
+          tags,
+          summary: "Designa o validador do documento (gestão ou PMO)",
+          security,
+          params: itemParamsSchema,
+          body: assignDeliveryValidatorBodySchema,
+          response: { 200: deliveryVersionSchema, ...complianceErrorResponses },
+        },
+      },
+      (request) => module.items.assignValidator(getAuthUser(request), request.params.id, request.params.versionId, request.params.itemId, request.body),
+    );
+
+    app.get(
+      "/projects/:id/delivery-versions/:versionId/items/:itemId/events",
+      {
+        schema: {
+          operationId: "listDeliveryItemEvents",
+          tags,
+          summary: "Histórico de envio e validação do documento",
+          security,
+          params: itemParamsSchema,
+          response: { 200: deliveryItemEventListSchema, ...complianceErrorResponses },
+        },
+      },
+      (request) => module.items.listEvents(getAuthUser(request), request.params.id, request.params.versionId, request.params.itemId),
     );
   };
 }

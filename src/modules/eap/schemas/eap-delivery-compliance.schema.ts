@@ -161,3 +161,81 @@ export const createDeliveryVersionBodySchema = z
 export type CreateDeliveryVersionBody = z.infer<typeof createDeliveryVersionBodySchema>;
 export type DeliveryVersionDto = z.infer<typeof deliveryVersionSchema>;
 export type DeliveryVersionItemDto = z.infer<typeof deliveryVersionItemSchema>;
+
+// ---------- Envio e validação documental ----------
+
+export const itemParamsSchema = z.object({ id: z.string().min(1), versionId: z.string().min(1), itemId: z.string().min(1) });
+
+/** Normaliza a evidência: link do SharePoint (https) ou referência de tag/release do GitLab (nome ou link). Devolve null se inválida. */
+export function normalizeEvidence(kind: string, reference: string): string | null {
+  const ref = reference.trim();
+  if (ref.length < 1 || ref.length > 1000) return null;
+  const asUrl = (protocols: string[]) => {
+    try {
+      return protocols.includes(new URL(ref).protocol) ? ref : null;
+    } catch {
+      return null;
+    }
+  };
+  switch (kind) {
+    case "SHAREPOINT":
+      return asUrl(["https:"]);
+    case "OUTRO":
+      return asUrl(["https:", "http:"]);
+    case "GITLAB_TAG":
+    case "GITLAB_RELEASE":
+      return /^[A-Za-z0-9][A-Za-z0-9._\-/+]{0,199}$/.test(ref) ? ref : asUrl(["https:"]);
+    default:
+      return null;
+  }
+}
+
+export const submitDeliveryItemBodySchema = z
+  .object({
+    evidenceKind: deliveryEvidenceKindSchema,
+    evidenceRef: z.string().trim().min(1).max(1000).describe("Link do SharePoint ou tag/release do GitLab (nome ou link)."),
+    note: z.string().trim().max(2000).nullable().optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (normalizeEvidence(value.evidenceKind, value.evidenceRef) === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["evidenceRef"],
+        message:
+          value.evidenceKind === "SHAREPOINT"
+            ? "Informe o link (https) do SharePoint."
+            : value.evidenceKind === "OUTRO"
+              ? "Informe um link http ou https."
+              : "Informe o nome da tag ou release do GitLab, ou o link dela.",
+      });
+    }
+  });
+
+export const approveDeliveryItemBodySchema = z.object({ note: z.string().trim().max(2000).nullable().optional() }).strict();
+
+/** Rejeição e dispensa exigem justificativa formal de pelo menos 10 caracteres. */
+export const reasonDeliveryItemBodySchema = z.object({ note: z.string().trim().min(10).max(2000) }).strict();
+
+export const assignDeliveryValidatorBodySchema = z
+  .object({ validatorId: z.string().min(1).nullable().describe("Participante do projeto (não fornecedor); nulo remove a designação.") })
+  .strict();
+
+export const deliveryItemEventListSchema = z.object({
+  data: z.array(
+    z.object({
+      id: z.string(),
+      action: z.enum(["ENVIO", "APROVACAO", "REJEICAO", "DISPENSA"]),
+      actor: personSchema.nullable(),
+      evidenceKind: deliveryEvidenceKindSchema.nullable(),
+      evidenceRef: z.string().nullable(),
+      note: z.string().nullable(),
+      createdAt: z.string(),
+    }),
+  ),
+});
+
+export type SubmitDeliveryItemBody = z.infer<typeof submitDeliveryItemBodySchema>;
+export type ApproveDeliveryItemBody = z.infer<typeof approveDeliveryItemBodySchema>;
+export type ReasonDeliveryItemBody = z.infer<typeof reasonDeliveryItemBodySchema>;
+export type AssignDeliveryValidatorBody = z.infer<typeof assignDeliveryValidatorBodySchema>;
