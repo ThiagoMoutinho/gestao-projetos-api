@@ -18,6 +18,8 @@ import { makeEapRoutes } from "./modules/eap/eap.routes";
 import { makeEapModule } from "./modules/eap/factories/make-eap-controller";
 import { makeProjectsModule } from "./modules/projects/factories/make-projects-controller";
 import { makeBusinessCalendarModule, makeBusinessCalendarRoutes } from "./modules/business-calendar/business-calendar.routes";
+import { makeNotificationsModule, makeNotificationsRoutes } from "./modules/notifications/notifications.routes";
+import { makeNotificationSchedulerPlugin } from "./modules/notifications/scheduler.plugin";
 import { makeUserAdminModule, makeUserAdminRoutes } from "./modules/user-admin/user-admin.routes";
 import { makeInstitutionalModule } from "./modules/institutional/factories/make-institutional-module";
 import { makeInstitutionalRoutes } from "./modules/institutional/institutional.routes";
@@ -199,7 +201,10 @@ export async function buildApp() {
   await app.register(makeInstitutionalRoutes(institutionalController));
   await app.register(makeOverviewLayoutRoutes(makeOverviewLayoutModule(db)));
   await app.register(makeBusinessCalendarRoutes(makeBusinessCalendarModule(db)));
+  await app.register(makeNotificationsRoutes(makeNotificationsModule(db)));
   await app.register(makeUserAdminRoutes(makeUserAdminModule(db)));
+  // Desligado por padrão (NOTIFICATIONS_SCHEDULER_IN_API=on para ligar); nunca depende de um terminal aberto.
+  await app.register(makeNotificationSchedulerPlugin(db));
 
   return app;
 }

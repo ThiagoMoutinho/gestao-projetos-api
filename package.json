@@ -12,6 +12,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "notifications:run": "tsx src/scripts/run-notifications.ts",
+    "notifications:worker": "tsx src/scripts/run-notification-scheduler.ts",
     "bootstrap:dev-user": "tsx src/scripts/bootstrap-dev-pmo.ts",
     "seed:demo": "tsx src/scripts/demo-seed/run.ts",
     "seed:demo:clean": "tsx src/scripts/demo-seed/clean.ts",
