@@ -5,6 +5,7 @@ import { DrizzleUsersRepository } from "../../projects/repositories/users.reposi
 import { makeEapController } from "../eap.controller";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import { DrizzleEapAuditRepository } from "../repositories/eap-audit.repository";
+import { DrizzleDeliveryComplianceRepository } from "../repositories/delivery-compliance.repository";
 import { DrizzleEapExecutiveSummariesRepository } from "../repositories/eap-executive-summaries.repository";
 import { DrizzleEapEvidencesRepository } from "../repositories/eap-evidences.repository";
 import { DrizzleEapImpedimentsRepository } from "../repositories/eap-impediments.repository";
@@ -77,6 +78,7 @@ export function makeEapRepos(client: DbClient): EapRepos {
     evidences: new DrizzleEapEvidencesRepository(client),
     audit: new DrizzleEapAuditRepository(client),
     executiveSummaries: new DrizzleEapExecutiveSummariesRepository(client),
+    deliveryCompliance: new DrizzleDeliveryComplianceRepository(client),
   };
 }
 

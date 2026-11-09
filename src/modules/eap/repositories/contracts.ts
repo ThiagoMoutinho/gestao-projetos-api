@@ -1,3 +1,4 @@
+import type { DeliveryComplianceRepository } from "./delivery-compliance.contract";
 import type { eapAuditActionEnum, projectExecutiveSummaryValidations } from "../../../db/schema";
 import type {
   ProjectMembersRepository,
@@ -416,6 +417,7 @@ export type EapRepos = {
   evidences: EapEvidencesRepository;
   audit: EapAuditRepository;
   executiveSummaries: EapExecutiveSummariesRepository;
+  deliveryCompliance: DeliveryComplianceRepository;
 };
 
 export type EapTransactionRunner = <T>(fn: (repos: EapRepos) => Promise<T>) => Promise<T>;

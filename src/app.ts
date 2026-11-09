@@ -14,6 +14,7 @@ import z from "zod";
 import { db } from "./db";
 import { registerErrorHandler } from "./http/error-handler";
 import { auth } from "./lib/auth";
+import { makeDeliveryComplianceModule, makeDeliveryComplianceRoutes } from "./modules/eap/delivery-compliance.routes";
 import { makeEapRoutes } from "./modules/eap/eap.routes";
 import { makeEapModule } from "./modules/eap/factories/make-eap-controller";
 import { makeProjectsModule } from "./modules/projects/factories/make-projects-controller";
@@ -196,6 +197,7 @@ export async function buildApp() {
 
   const eapController = makeEapModule(db);
   await app.register(makeEapRoutes(eapController));
+  await app.register(makeDeliveryComplianceRoutes(makeDeliveryComplianceModule(db)));
 
   const institutionalController = makeInstitutionalModule(db);
   await app.register(makeInstitutionalRoutes(institutionalController));

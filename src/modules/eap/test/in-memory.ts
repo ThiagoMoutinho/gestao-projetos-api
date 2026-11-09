@@ -16,6 +16,13 @@ import type { EapMilestoneDeliveryRow } from "../dtos/eap-milestone-deliveries.d
 import type { EapAuditLogRow, EapPhaseRow } from "../dtos/eap-phases.dto";
 import type { EapMilestoneRow } from "../dtos/eap-milestones.dto";
 import type { EapTaskRow } from "../dtos/eap-tasks.dto";
+import {
+  cloneDeliveryComplianceState,
+  createDeliveryComplianceState,
+  InMemoryDeliveryComplianceRepository,
+  restoreDeliveryComplianceState,
+  type DeliveryComplianceState,
+} from "./delivery-compliance.in-memory";
 import { ExecutiveSummaryRegularConflictError } from "../repositories/contracts";
 import type {
   EapAuditActionFilter,
@@ -73,6 +80,7 @@ export type EapInMemoryStore = ProjectStore & {
   evidences: EapEvidenceRow[];
   auditLogs: EapAuditLogRow[];
   executiveSummaries: ExecutiveSummaryValidationRow[];
+  deliveryCompliance: DeliveryComplianceState;
 };
 
 export function createEapInMemoryStore(
@@ -92,6 +100,7 @@ export function createEapInMemoryStore(
     evidences: seed?.evidences ?? [],
     auditLogs: seed?.auditLogs ?? [],
     executiveSummaries: seed?.executiveSummaries ?? [],
+    deliveryCompliance: seed?.deliveryCompliance ?? createDeliveryComplianceState(),
   };
 }
 
@@ -864,6 +873,7 @@ export function makeEapInMemoryRepos(store: EapInMemoryStore): EapRepos {
     evidences: new InMemoryEapEvidencesRepository(store),
     audit: new InMemoryEapAuditRepository(store),
     executiveSummaries: new InMemoryEapExecutiveSummariesRepository(store),
+    deliveryCompliance: new InMemoryDeliveryComplianceRepository(store.deliveryCompliance),
   };
 }
 
@@ -882,6 +892,7 @@ function cloneStore(store: EapInMemoryStore): EapInMemoryStore {
     evidences: store.evidences.map((row) => ({ ...row })),
     auditLogs: store.auditLogs.map((row) => ({ ...row })),
     executiveSummaries: store.executiveSummaries.map((row) => ({ ...row })),
+    deliveryCompliance: cloneDeliveryComplianceState(store.deliveryCompliance),
   };
 }
 
@@ -899,6 +910,7 @@ function restoreStore(store: EapInMemoryStore, snapshot: EapInMemoryStore) {
   store.evidences.splice(0, store.evidences.length, ...snapshot.evidences);
   store.auditLogs.splice(0, store.auditLogs.length, ...snapshot.auditLogs);
   store.executiveSummaries.splice(0, store.executiveSummaries.length, ...snapshot.executiveSummaries);
+  restoreDeliveryComplianceState(store.deliveryCompliance, snapshot.deliveryCompliance);
 }
 
 export function makeEapInMemoryTransactionRunner(

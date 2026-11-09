@@ -299,3 +299,8 @@ function isAssignedTo(context: ProjectAccessContext, assigneeId: string | null):
 export function canValidateExecutiveSummary(context: ProjectAccessContext): boolean {
   return context.globalRole === "PMO";
 }
+
+/** Modelos de checklist da Conformidade de Entrega: criar, editar e publicar revisões é papel de ADMIN e PMO. */
+export function canManageDeliveryTemplates(globalRole: string): boolean {
+  return globalRole === "ADMIN" || globalRole === "PMO";
+}
