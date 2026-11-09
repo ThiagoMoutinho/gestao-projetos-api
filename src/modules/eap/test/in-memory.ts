@@ -873,7 +873,7 @@ export function makeEapInMemoryRepos(store: EapInMemoryStore): EapRepos {
     evidences: new InMemoryEapEvidencesRepository(store),
     audit: new InMemoryEapAuditRepository(store),
     executiveSummaries: new InMemoryEapExecutiveSummariesRepository(store),
-    deliveryCompliance: new InMemoryDeliveryComplianceRepository(store.deliveryCompliance),
+    deliveryCompliance: new InMemoryDeliveryComplianceRepository(store.deliveryCompliance, (versionId) => store.deliveries.filter((row) => row.deliveryVersionId === versionId).length),
   };
 }
 

@@ -10,6 +10,8 @@ export type EapMilestoneDeliveryEntryRow = EapMilestoneDeliveryRow & {
 
 export type DeliverMilestoneInput = {
   note?: string | null;
+  /** Versão de entrega (Conformidade de Entrega) avaliada na rodada; na homologação, sem ela vale a versão mais recente. */
+  deliveryVersionId?: string | null;
 };
 
 export type AuthorizeResubmissionInput = {
@@ -36,6 +38,8 @@ export type EapMilestoneDeliveryDto = {
   resubmissionAuthorizedByName: string | null;
   resubmissionAuthorizedAt: string | null;
   resubmissionNote: string | null;
+  /** Versão lógica do produto avaliada nesta rodada (Conformidade de Entrega). */
+  deliveryVersionId: string | null;
 };
 
 function toIso(value: Date | null): string | null {
@@ -63,5 +67,6 @@ export function toEapMilestoneDeliveryDto(row: EapMilestoneDeliveryEntryRow): Ea
     resubmissionAuthorizedByName: row.resubmissionAuthorizedByName,
     resubmissionAuthorizedAt: toIso(row.resubmissionAuthorizedAt),
     resubmissionNote: row.resubmissionNote,
+    deliveryVersionId: row.deliveryVersionId,
   };
 }

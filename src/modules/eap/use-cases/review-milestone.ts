@@ -4,6 +4,7 @@ import type { EapMilestoneDeliveryRow } from "../dtos/eap-milestone-deliveries.d
 import type { EapMilestoneRow, ReviewMilestoneInput } from "../dtos/eap-milestones.dto";
 import { toEapMilestoneDto } from "../dtos/eap-milestones.dto";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
+import { assertHomologationConforming } from "./delivery-gate";
 import { syncPhaseStatus } from "./phase-rollup";
 import {
   assertCanHomologateMilestone,
@@ -106,6 +107,10 @@ export function makeReviewMilestoneUseCase(deps: {
           throw milestoneSelfReviewError();
         }
         linkedEvidenceIds = opened.linkedEvidenceIds;
+        // Conformidade de Entrega: só o aceite do marco de homologação de projeto com fornecedor é bloqueado.
+        if (approved && current.type === "HOMOLOGACAO") {
+          await assertHomologationConforming(txRepos, projectId, opened.round);
+        }
         delivery = await txRepos.deliveries.decide(opened.round.id, {
           status: DELIVERY_STATUS[input.decision],
           decidedBy: actor.id,

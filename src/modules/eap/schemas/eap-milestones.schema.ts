@@ -78,6 +78,12 @@ export const updateMilestoneBodySchema = z
 export const deliverMilestoneBodySchema = z
   .object({
     note: z.string().trim().max(4000).nullable().optional(),
+    deliveryVersionId: z
+      .string()
+      .min(1)
+      .nullable()
+      .optional()
+      .describe("Versão de entrega avaliada na rodada. Sem ela, a homologação em projeto com fornecedor usa a versão mais recente."),
   })
   .strict();
 
@@ -159,6 +165,7 @@ export const eapMilestoneDeliverySchema = z.object({
   resubmissionAuthorizedByName: z.string().nullable(),
   resubmissionAuthorizedAt: z.string().nullable(),
   resubmissionNote: z.string().nullable(),
+  deliveryVersionId: z.string().nullable().describe("Versão de entrega avaliada nesta rodada."),
 });
 
 export const eapMilestoneDeliveryListResponseSchema = z.object({

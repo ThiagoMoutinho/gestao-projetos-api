@@ -99,7 +99,11 @@ export function restoreDeliveryComplianceState(target: DeliveryComplianceState, 
 }
 
 export class InMemoryDeliveryComplianceRepository implements DeliveryComplianceRepository {
-  constructor(private readonly state: DeliveryComplianceState) {}
+  constructor(
+    private readonly state: DeliveryComplianceState,
+    /** Rodadas reais (eap_milestone_deliveries) ligadas a cada versão. */
+    private readonly countLinkedRounds: (versionId: string) => number = () => 0,
+  ) {}
 
   async listTemplates() {
     return [...this.state.templates].sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
@@ -228,7 +232,7 @@ export class InMemoryDeliveryComplianceRepository implements DeliveryComplianceR
   }
 
   async countRoundsByVersion(versionIds: string[]) {
-    return Object.fromEntries(versionIds.map((id) => [id, this.state.roundsByVersion[id] ?? 0]));
+    return Object.fromEntries(versionIds.map((id) => [id, (this.state.roundsByVersion[id] ?? 0) + this.countLinkedRounds(id)]));
   }
 
   async getItem(itemId: string) {
@@ -281,4 +285,46 @@ export class InMemoryDeliveryComplianceRepository implements DeliveryComplianceR
       .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
       .map((event) => ({ ...event }));
   }
+}
+
+/**
+ * Registra uma versão de entrega já conforme (todos os itens obrigatórios aprovados ou dispensados) para testes que precisam
+ * homologar ou encerrar um projeto com fornecedor sem percorrer todo o fluxo documental.
+ */
+export function seedConformingVersion(state: DeliveryComplianceState, projectId: string, versionLabel = "1.0", createdAt = new Date("2026-02-01T12:00:00.000Z")) {
+  const version: DeliveryVersionRow = {
+    id: `ver-${projectId}-${versionLabel}`,
+    projectId,
+    versionLabel,
+    nature: "SISTEMAS",
+    templateRevisionId: "rev-sistemas-1",
+    notes: null,
+    createdBy: "seed",
+    createdAt,
+  };
+  state.versions.push(version);
+  state.items
+    .filter((item) => item.revisionId === "rev-sistemas-1")
+    .forEach((item) =>
+      state.versionItems.push({
+        id: `${version.id}-${item.position}`,
+        versionId: version.id,
+        templateItemId: item.id,
+        position: item.position,
+        documentType: item.documentType,
+        title: item.title,
+        description: item.description,
+        required: item.required,
+        status: item.required ? "APROVADO" : "PENDENTE",
+        evidenceKind: item.required ? "SHAREPOINT" : null,
+        evidenceRef: item.required ? "https://igepps.sharepoint.com/sites/ctin/documento" : null,
+        submittedBy: item.required ? "seed-sender" : null,
+        submittedAt: item.required ? createdAt : null,
+        validatorId: null,
+        decidedBy: item.required ? "seed-validator" : null,
+        decidedAt: item.required ? createdAt : null,
+        decisionNote: null,
+      }),
+    );
+  return version;
 }

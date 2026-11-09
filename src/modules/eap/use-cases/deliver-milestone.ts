@@ -3,6 +3,7 @@ import type { AuthUser } from "../../../lib/session";
 import type { DeliverMilestoneInput } from "../dtos/eap-milestone-deliveries.dto";
 import { toEapMilestoneDto } from "../dtos/eap-milestones.dto";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
+import { resolveRoundVersionId } from "./delivery-gate";
 import { syncPhaseStatus } from "./phase-rollup";
 import {
   assertCanDeliverMilestone,
@@ -61,6 +62,8 @@ export function makeDeliverMilestoneUseCase(deps: {
         throw milestoneResubmissionNotAuthorizedError();
       }
 
+      // Rodada nova de uma versão já existente: o reenvio após rejeição não cria versão nova.
+      const deliveryVersionId = await resolveRoundVersionId(txRepos, projectId, current.type, input.deliveryVersionId);
       const submittedAt = new Date();
       const delivery = await txRepos.deliveries.create({
         id: crypto.randomUUID(),
@@ -70,6 +73,7 @@ export function makeDeliverMilestoneUseCase(deps: {
         submittedBy: actor.id,
         submittedAt,
         note,
+        deliveryVersionId,
       });
       const evidenceIds = await txRepos.evidences.linkToDelivery(milestoneId, delivery.id);
 
@@ -101,6 +105,7 @@ export function makeDeliverMilestoneUseCase(deps: {
           to: "ENTREGUE",
           deliveryId: delivery.id,
           round: delivery.round,
+          deliveryVersionId,
           note,
           evidenceIds,
           deliveredBy: actor.id,

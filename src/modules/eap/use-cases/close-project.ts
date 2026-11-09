@@ -2,6 +2,7 @@ import { HttpError } from "../../../lib/http-error";
 import type { AuthUser } from "../../../lib/session";
 import { canCloseProject } from "../eap.authorization";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
+import { assertProjectDeliveriesConforming } from "./delivery-gate";
 import { loadProjectSituation } from "./project-situation";
 import { assertCanView, loadProjectAccess } from "./shared";
 
@@ -44,6 +45,9 @@ export function makeCloseProjectUseCase(deps: { repos: EapRepos; runInTransactio
           "PROJECT_NOT_READY_FOR_CLOSURE",
         );
       }
+
+      // Conformidade de Entrega: projeto com fornecedor só encerra com todas as versões registradas conformes.
+      await assertProjectDeliveriesConforming(txRepos, projectId);
 
       const updated = await txRepos.projects.update(projectId, { status: "CONCLUIDO", updatedAt: now });
       if (!updated) {

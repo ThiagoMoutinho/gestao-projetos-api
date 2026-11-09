@@ -12,6 +12,7 @@ import {
   makeProject,
   makeUser,
 } from "../test/in-memory";
+import { seedConformingVersion } from "../test/delivery-compliance.in-memory";
 import { makeAuthorizeResubmissionUseCase } from "./authorize-resubmission";
 import { makeCreateMilestoneUseCase } from "./create-milestone";
 import { makeCreatePhaseUseCase } from "./create-phase";
@@ -126,6 +127,8 @@ describe("marco de homologação", () => {
       adjustments: "Anexar o termo de aceite.",
     });
     await ctx.deliver();
+    // Projeto com fornecedor: o aceite final exige a versão de entrega com o checklist documental conforme.
+    seedConformingVersion(ctx.store.deliveryCompliance, "project-1");
     const homologated = await ctx.review({ decision: "APROVADO" });
 
     assert.equal(ctx.store.milestones.length, 1);
