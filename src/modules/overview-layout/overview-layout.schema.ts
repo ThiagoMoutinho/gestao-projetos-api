@@ -3,7 +3,7 @@ import { z } from "zod";
 import { errorResponseSchema } from "../../lib/http-error";
 
 /** Widgets da Visão Geral que podem ser reordenados. A lista é fixa: o cliente não cria widgets novos. */
-export const OVERVIEW_WIDGET_IDS = ["sobre", "resultados", "evolucoes", "situacao", "marcos", "historico", "resumo", "planejamento", "evidencias", "equipe"] as const;
+export const OVERVIEW_WIDGET_IDS = ["sobre", "resultados", "evolucoes", "situacao", "marcos", "historico", "resumo", "planejamento", "evidencias", "equipe", "conformidade"] as const;
 
 /** Altura do widget: automática (acompanha o conteúdo) ou limite fixo com rolagem interna. Ausente = automática. */
 export const OVERVIEW_WIDGET_HEIGHTS = ["auto", "compacta", "media", "alta"] as const;
