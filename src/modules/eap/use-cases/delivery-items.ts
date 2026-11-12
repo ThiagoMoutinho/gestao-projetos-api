@@ -199,28 +199,65 @@ export function makeDeliveryItemUseCases(deps: { repos: EapRepos; runInTransacti
             : `Designação de validador do documento "${item.title}" (versão ${version.versionLabel}) removida.`,
           payload: { kind: "DELIVERY_ITEM_VALIDATOR_ASSIGNED", versionId, versionLabel: version.versionLabel, from: item.validatorId, to: body.validatorId },
           actorId: actor.id,
+          // Mesmo relógio do histórico do documento (createdAt informado pela aplicação), para a troca aparecer na ordem certa.
+          createdAt: new Date(),
         });
         return (await buildVersionDtos(repos, [version]))[0];
       });
     },
 
     async listEvents(actor: AuthUser, projectId: string, versionId: string, itemId: string) {
-      const { context } = await loadProjectAccess(deps.repos, actor, projectId);
+      const { project, context } = await loadProjectAccess(deps.repos, actor, projectId);
       assertCanView(context);
       const { item } = await load(deps.repos, projectId, versionId, itemId);
-      const events = await deps.repos.deliveryCompliance.listItemEvents(item.id);
-      const person = await loadPeople(deps.repos, events.map((event) => event.actorId));
-      return {
-        data: events.map((event) => ({
+      const [events, audits, members] = await Promise.all([
+        deps.repos.deliveryCompliance.listItemEvents(item.id),
+        deps.repos.audit.listByEntity({ projectId, entityType: "DELIVERY_ITEM", entityId: item.id, includeEvidences: false, limit: 500 }),
+        deps.repos.members.listByProject(projectId),
+      ]);
+      // Trocas de validador ficam na auditoria (o histórico do documento guarda envio e decisões); entram no histórico como DESIGNACAO.
+      const assignments = audits
+        .filter((row) => (row.payload as Record<string, unknown> | null)?.kind === "DELIVERY_ITEM_VALIDATOR_ASSIGNED")
+        .map((row) => {
+          const payload = row.payload as { from?: string | null; to?: string | null };
+          return { id: row.id, actorId: row.actorId, createdAt: row.createdAt, from: payload.from ?? null, to: payload.to ?? null };
+        });
+      const actorIds = [...events.map((event) => event.actorId), ...assignments.map((entry) => entry.actorId)];
+      const person = await loadPeople(deps.repos, [...actorIds, ...assignments.flatMap((entry) => [entry.from, entry.to])]);
+      const users = await Promise.all([...new Set(actorIds)].map((id) => deps.repos.users.findById(id)));
+      const globalRole = new Map(users.flatMap((found) => (found ? [[found.id, found.role as string] as const] : [])));
+      const projectRoles = (userId: string) => [
+        ...new Set([
+          ...(userId === project.ownerId ? ["DONO_PROJETO"] : []),
+          ...members.filter((entry) => entry.member.userId === userId).map((entry) => entry.member.role as string),
+        ]),
+      ];
+      const who = (actorId: string) => ({ actor: person(actorId), actorRole: globalRole.get(actorId) ?? null, actorProjectRoles: projectRoles(actorId) });
+      const data = [
+        ...events.map((event) => ({
           id: event.id,
           action: event.action,
-          actor: person(event.actorId),
+          ...who(event.actorId),
           evidenceKind: event.evidenceKind,
           evidenceRef: event.evidenceRef,
           note: event.note,
-          createdAt: event.createdAt.toISOString(),
+          previousValidator: null,
+          newValidator: null,
+          at: event.createdAt,
         })),
-      };
+        ...assignments.map((entry) => ({
+          id: entry.id,
+          action: "DESIGNACAO" as const,
+          ...who(entry.actorId),
+          evidenceKind: null,
+          evidenceRef: null,
+          note: null,
+          previousValidator: person(entry.from),
+          newValidator: person(entry.to),
+          at: entry.createdAt,
+        })),
+      ].sort((a, b) => a.at.getTime() - b.at.getTime());
+      return { data: data.map(({ at, ...event }) => ({ ...event, createdAt: at.toISOString() })) };
     },
   };
 

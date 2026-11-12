@@ -190,6 +190,43 @@ describe("envio e validação documental", () => {
     assert.equal(itemOf(cleared, ctx.plano).validator, null);
   });
 
+  it("a versão informa os responsáveis técnicos do marco de homologação, que validam os documentos sem validador designado", async () => {
+    const ctx = await setup();
+    assert.deepEqual(ctx.version.defaultValidators, [{ id: "tec-1", name: "Pessoa tec-1" }]);
+  });
+
+  it("histórico: envio, rejeição, reenvio, aprovação e trocas de validador com autor, perfil, papéis no projeto, data e justificativa", async () => {
+    const ctx = await setup();
+    await ctx.items.assignValidator(manager, "project-1", ctx.version.id, ctx.escopo, { validatorId: "tec-2" });
+    await submit(ctx, supplier, ctx.escopo);
+    await reject(ctx, tech2, ctx.escopo, "Faltam os critérios de aceite do módulo financeiro.");
+    await submit(ctx, supplier, ctx.escopo, { evidenceKind: "GITLAB_TAG", evidenceRef: "v1.0.1" });
+    await approve(ctx, tech2, ctx.escopo);
+    await ctx.items.assignValidator(pmo, "project-1", ctx.version.id, ctx.escopo, { validatorId: null });
+
+    const { data } = await ctx.items.listEvents(observer, "project-1", ctx.version.id, ctx.escopo);
+    const decisions = data.filter((event) => event.action !== "DESIGNACAO");
+    assert.deepEqual(decisions.map((event) => event.action), ["ENVIO", "REJEICAO", "ENVIO", "APROVACAO"], "o reenvio não apaga o envio anterior");
+    assert.deepEqual(decisions[0].actor, { id: "forn-1", name: "Pessoa forn-1" });
+    assert.equal(decisions[0].actorRole, "FORNECEDOR");
+    assert.deepEqual(decisions[0].actorProjectRoles, ["FORNECEDOR"]);
+    assert.equal(decisions[1].note, "Faltam os critérios de aceite do módulo financeiro.");
+    assert.deepEqual(decisions[1].actorProjectRoles, ["RESPONSAVEL_TECNICO"]);
+    assert.equal(decisions[2].evidenceRef, "v1.0.1");
+    assert.ok(decisions.every((event) => !Number.isNaN(Date.parse(event.createdAt))));
+
+    const designations = data.filter((event) => event.action === "DESIGNACAO");
+    assert.equal(designations.length, 2);
+    assert.deepEqual(designations[0].previousValidator, null);
+    assert.deepEqual(designations[0].newValidator, { id: "tec-2", name: "Pessoa tec-2" });
+    assert.equal(designations[0].actorRole, "GESTOR");
+    assert.deepEqual(designations[0].actorProjectRoles, ["GESTOR"]);
+    assert.deepEqual(designations[1].previousValidator, { id: "tec-2", name: "Pessoa tec-2" });
+    assert.equal(designations[1].newValidator, null);
+    assert.equal(designations[1].actorRole, "PMO");
+    assert.deepEqual(designations[1].actorProjectRoles, []);
+  });
+
   it("rejeição exige justificativa; o reenvio volta a ENVIADO sem criar versão e todo o histórico é preservado", async () => {
     const ctx = await setup();
     assert.equal(reasonDeliveryItemBodySchema.safeParse({ note: "curta" }).success, false);

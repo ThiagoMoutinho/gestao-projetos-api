@@ -57,9 +57,21 @@ export async function buildVersionDtos(repos: EapRepos, versions: DeliveryVersio
       [...new Set(versions.map((version) => version.templateRevisionId))].map(async (id) => [id, await repos.deliveryCompliance.getRevision(id)] as const),
     ),
   );
+  // Responsáveis técnicos dos marcos de homologação: validam os documentos sem validador designado (mesma regra do envio).
+  const projectIds = [...new Set(versions.map((version) => version.projectId))];
+  const reviewers = new Map(
+    await Promise.all(
+      projectIds.map(async (projectId) => {
+        const milestones = await repos.milestones.listByProject(projectId);
+        const ids = [...new Set(milestones.filter((milestone) => milestone.type === "HOMOLOGACAO" && milestone.reviewerId).map((milestone) => milestone.reviewerId as string))];
+        return [projectId, ids] as const;
+      }),
+    ),
+  );
   const person = await loadPeople(repos, [
     ...versions.map((version) => version.createdBy),
     ...items.flatMap((item) => [item.submittedBy, item.validatorId, item.decidedBy]),
+    ...[...reviewers.values()].flat(),
   ]);
 
   return versions.map((version) => {
@@ -76,6 +88,7 @@ export async function buildVersionDtos(repos: EapRepos, versions: DeliveryVersio
       createdAt: version.createdAt.toISOString(),
       rounds: rounds[version.id] ?? 0,
       conformity: computeConformity(own),
+      defaultValidators: (reviewers.get(version.projectId) ?? []).map((id) => person(id) as NonNullable<Person>),
       items: own.map((item) => toVersionItemDto(item, person)),
     };
   });

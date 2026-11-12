@@ -133,6 +133,9 @@ export const deliveryVersionSchema = z.object({
   createdAt: z.string(),
   rounds: z.number().int().describe("Rodadas de avaliação (eap_milestone_deliveries) ligadas a esta versão."),
   conformity: deliveryConformitySchema,
+  defaultValidators: z
+    .array(personSchema)
+    .describe("Responsáveis técnicos dos marcos de homologação: validam os documentos que não têm validador designado."),
   items: z.array(deliveryVersionItemSchema),
 });
 
@@ -225,8 +228,14 @@ export const deliveryItemEventListSchema = z.object({
   data: z.array(
     z.object({
       id: z.string(),
-      action: z.enum(["ENVIO", "APROVACAO", "REJEICAO", "DISPENSA"]),
+      action: z
+        .enum(["ENVIO", "APROVACAO", "REJEICAO", "DISPENSA", "DESIGNACAO"])
+        .describe("DESIGNACAO: troca do validador do documento (vem da auditoria); as demais vêm do histórico do documento."),
       actor: personSchema.nullable(),
+      actorRole: z.string().nullable().describe("Perfil global de quem agiu (ADMIN, PMO, GESTOR, FORNECEDOR...)."),
+      actorProjectRoles: z.array(z.string()).describe("Papéis de quem agiu no projeto (DONO_PROJETO, FORNECEDOR, RESPONSAVEL_TECNICO...)."),
+      previousValidator: personSchema.nullable().describe("DESIGNACAO: validador anterior (nulo: nenhum designado)."),
+      newValidator: personSchema.nullable().describe("DESIGNACAO: novo validador (nulo: designação removida)."),
       evidenceKind: deliveryEvidenceKindSchema.nullable(),
       evidenceRef: z.string().nullable(),
       note: z.string().nullable(),

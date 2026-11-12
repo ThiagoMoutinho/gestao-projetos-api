@@ -214,6 +214,23 @@ describe("Conformidade de Entrega: integração HTTP + banco de testes", () => {
     const events = await call("pmo", "GET", `${base}/${escopo.id}/events`);
     assert.deepEqual(events.body.data.map((event: { action: string }) => event.action), ["ENVIO", "REJEICAO", "ENVIO", "APROVACAO"]);
     assert.equal(events.body.data[0].actor.name, people.supplier.name);
+    assert.equal(events.body.data[0].actorRole, "FORNECEDOR");
+    assert.deepEqual(events.body.data[0].actorProjectRoles, ["FORNECEDOR"]);
+    assert.ok(events.body.data[1].note, "a rejeição traz a justificativa");
+
+    // Troca de validador: registrada na auditoria e exibida no histórico do documento como DESIGNACAO.
+    const assigned = await call("owner", "PUT", `${base}/${escopo.id}/validator`, { validatorId: people.tech.id });
+    assert.equal(assigned.status, 200, JSON.stringify(assigned.body));
+    assert.equal(assigned.body.items[0].validator.id, people.tech.id);
+    assert.deepEqual(assigned.body.defaultValidators.map((entry: { id: string }) => entry.id), [people.tech.id]);
+    const withDesignation = await call("dev", "GET", `${base}/${escopo.id}/events`);
+    const designation = withDesignation.body.data.at(-1);
+    assert.equal(designation.action, "DESIGNACAO");
+    assert.equal(designation.actor.id, people.owner.id);
+    assert.equal(designation.actorRole, "GESTOR");
+    assert.deepEqual(designation.actorProjectRoles, ["DONO_PROJETO"]);
+    assert.equal(designation.previousValidator, null);
+    assert.equal(designation.newValidator.id, people.tech.id);
 
     // Dispensa: só ADMIN e PMO, com justificativa formal (mínimo de 10 caracteres) e auditoria completa.
     for (const who of ["owner", "supplier", "tech", "dev"] as const) {
