@@ -20,6 +20,7 @@ const dev = actor("COLABORADOR", "dev-1");
 const po = actor("COLABORADOR", "po-1");
 const observer = actor("COLABORADOR", "obs-1");
 const pmo = actor("PMO", "pmo-1");
+const admin = actor("ADMIN", "admin-1");
 const coordinator = actor("COORDENADOR", "coord-1");
 const outsider = actor("GESTOR", "fora-1");
 
@@ -39,6 +40,7 @@ async function setup(options: { closed?: boolean } = {}) {
       makeUser({ id: "po-1", name: "Pessoa po-1", role: "COLABORADOR" }),
       makeUser({ id: "obs-1", name: "Pessoa obs-1", role: "COLABORADOR" }),
       makeUser({ id: "pmo-1", name: "Pessoa pmo-1", role: "PMO" }),
+      makeUser({ id: "admin-1", name: "Pessoa admin-1", role: "ADMIN" }),
       makeUser({ id: "coord-1", name: "Pessoa coord-1", role: "COORDENADOR" }),
       makeUser({ id: "fora-1", name: "Pessoa fora-1", role: "GESTOR" }),
     ],
@@ -226,9 +228,9 @@ describe("envio e validação documental", () => {
     await assert.rejects(() => waive(ctx, pmo, ctx.escopo), code("DELIVERY_ITEM_TRANSITION_INVALID"));
   });
 
-  it("somente o PMO dispensa, com justificativa formal; documento dispensado deixa de bloquear a conformidade", async () => {
+  it("somente ADMIN e PMO dispensam, com justificativa formal; documento dispensado deixa de bloquear a conformidade", async () => {
     const ctx = await setup();
-    for (const person of [owner, manager, supplier, tech, coordinator]) {
+    for (const person of [owner, manager, supplier, tech, tech2, dev, po, observer, coordinator]) {
       await assert.rejects(() => waive(ctx, person, ctx.docs), code("DELIVERY_ITEM_WAIVE_FORBIDDEN"), person.id);
     }
     const updated = await waive(ctx, pmo, ctx.docs);
@@ -240,6 +242,34 @@ describe("envio e validação documental", () => {
     assert.ok(ctx.store.auditLogs.some((row) => (row.payload as Record<string, unknown>).kind === "DELIVERY_ITEM_WAIVED"));
     const { data: events } = await ctx.items.listEvents(pmo, "project-1", ctx.version.id, ctx.docs);
     assert.deepEqual(events.map((event) => event.action), ["DISPENSA"]);
+  });
+
+  it("ADMIN também dispensa; a auditoria guarda quem, o perfil, a justificativa e a situação anterior", async () => {
+    const ctx = await setup();
+    await submit(ctx, supplier, ctx.plano);
+    const updated = await waive(ctx, admin, ctx.plano, "Plano substituído pela evidência de testes automatizados.");
+    const item = itemOf(updated, ctx.plano);
+    assert.equal(item.status, "DISPENSADO");
+    assert.deepEqual(item.decidedBy, { id: "admin-1", name: "Pessoa admin-1" });
+    assert.equal(item.decisionNote, "Plano substituído pela evidência de testes automatizados.");
+    const row = ctx.store.auditLogs.find((entry) => (entry.payload as Record<string, unknown>).kind === "DELIVERY_ITEM_WAIVED");
+    assert.ok(row, "dispensa auditada");
+    assert.equal(row.actorId, "admin-1");
+    assert.equal(row.entityId, ctx.plano);
+    const payload = row.payload as Record<string, unknown>;
+    assert.equal(payload.actorRole, "ADMIN");
+    assert.equal(payload.note, "Plano substituído pela evidência de testes automatizados.");
+    assert.equal(payload.from, "ENVIADO");
+    assert.equal(payload.to, "DISPENSADO");
+    assert.equal(payload.required, true);
+    const { data: events } = await ctx.items.listEvents(admin, "project-1", ctx.version.id, ctx.plano);
+    assert.deepEqual(events.map((event) => event.action), ["ENVIO", "DISPENSA"]);
+  });
+
+  it("dispensa exige justificativa formal de ao menos 10 caracteres", () => {
+    assert.equal(reasonDeliveryItemBodySchema.safeParse({ note: "curta" }).success, false);
+    assert.equal(reasonDeliveryItemBodySchema.safeParse({ note: "          " }).success, false);
+    assert.equal(reasonDeliveryItemBodySchema.safeParse({ note: "Não se aplica a esta entrega." }).success, true);
   });
 
   it("a versão fica conforme quando todo obrigatório está aprovado ou dispensado; pendente, enviado ou rejeitado bloqueiam; opcional não", async () => {

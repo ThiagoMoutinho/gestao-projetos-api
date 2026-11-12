@@ -29,9 +29,12 @@ async function effectiveValidators(repos: EapRepos, projectId: string, item: Del
   return [...new Set(milestones.filter((milestone) => milestone.type === "HOMOLOGACAO" && milestone.reviewerId).map((milestone) => milestone.reviewerId as string))];
 }
 
+/** Perfis globais que dispensam documentos obrigatórios, sempre com justificativa formal (mínimo de 10 caracteres) e auditoria. */
+const WAIVER_ROLES: ReadonlyArray<string> = ["ADMIN", "PMO"];
+
 /**
  * Envio e validação documental da Conformidade de Entrega. O sistema só registra links (SharePoint) e referências de tag ou
- * release (GitLab). Regras: quem enviou não valida o próprio envio; o validador é o responsável técnico designado; só o PMO
+ * release (GitLab). Regras: quem enviou não valida o próprio envio; o validador é o responsável técnico designado; só ADMIN e PMO
  * dispensa (com justificativa formal); rejeição também exige justificativa; todo o histórico é preservado e auditado.
  */
 export function makeDeliveryItemUseCases(deps: { repos: EapRepos; runInTransaction: EapTransactionRunner }) {
@@ -90,6 +93,8 @@ export function makeDeliveryItemUseCases(deps: { repos: EapRepos; runInTransacti
         to: params.to,
         evidenceKind: params.evidence?.kind ?? null,
         note: params.note,
+        // Dispensa: registra também o perfil de quem dispensou (ADMIN ou PMO), além da justificativa e da situação anterior.
+        ...(params.action === "DISPENSA" ? { actorRole: params.actor.role } : {}),
       },
       actorId: params.actor.id,
     });
@@ -230,8 +235,8 @@ export function makeDeliveryItemUseCases(deps: { repos: EapRepos; runInTransacti
     const { project, context } = await loadProjectAccess(deps.repos, actor, projectId);
     assertCanView(context);
     assertOpen(project);
-    if (status === "DISPENSADO" && actor.role !== "PMO") {
-      throw new HttpError(403, "Somente o PMO dispensa documentos, mediante justificativa formal.", "DELIVERY_ITEM_WAIVE_FORBIDDEN");
+    if (status === "DISPENSADO" && !WAIVER_ROLES.includes(actor.role)) {
+      throw new HttpError(403, "Somente o ADMIN ou o PMO dispensam documentos, mediante justificativa formal.", "DELIVERY_ITEM_WAIVE_FORBIDDEN");
     }
 
     return deps.runInTransaction(async (repos) => {

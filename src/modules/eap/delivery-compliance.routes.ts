@@ -191,7 +191,7 @@ export function makeDeliveryComplianceRoutes(module: DeliveryComplianceModule): 
         schema: {
           operationId: "waiveDeliveryItem",
           tags,
-          summary: "Dispensa o documento, com justificativa formal (PMO)",
+          summary: "Dispensa o documento, com justificativa formal (ADMIN e PMO)",
           security,
           params: itemParamsSchema,
           body: reasonDeliveryItemBodySchema,

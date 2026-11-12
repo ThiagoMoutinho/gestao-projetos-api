@@ -21,6 +21,7 @@ const PASSWORD = "Ficticio@Dc20";
 const FRONT_ORIGIN = "http://localhost:3001";
 const people = {
   pmo: { id: `dc-pmo-${RUN}`, role: "PMO", name: "PMO Fictício" },
+  admin: { id: `dc-admin-${RUN}`, role: "ADMIN", name: "Admin Fictício" },
   owner: { id: `dc-owner-${RUN}`, role: "GESTOR", name: "Gestor Fictício" },
   supplier: { id: `dc-forn-${RUN}`, role: "FORNECEDOR", name: "Fornecedor Fictício" },
   tech: { id: `dc-tec-${RUN}`, role: "COLABORADOR", name: "Técnico Fictício" },
@@ -214,11 +215,20 @@ describe("Conformidade de Entrega: integração HTTP + banco de testes", () => {
     assert.deepEqual(events.body.data.map((event: { action: string }) => event.action), ["ENVIO", "REJEICAO", "ENVIO", "APROVACAO"]);
     assert.equal(events.body.data[0].actor.name, people.supplier.name);
 
-    assert.equal((await call("owner", "POST", `${base}/${plano.id}/waive`, { note: "Plano substituído por evidência de testes." })).status, 403);
-    const waived = await call("pmo", "POST", `${base}/${plano.id}/waive`, { note: "Plano substituído por evidência de testes." });
+    // Dispensa: só ADMIN e PMO, com justificativa formal (mínimo de 10 caracteres) e auditoria completa.
+    for (const who of ["owner", "supplier", "tech", "dev"] as const) {
+      assert.equal((await call(who, "POST", `${base}/${plano.id}/waive`, { note: "Plano substituído por evidência de testes." })).status, 403, who);
+    }
+    assert.equal((await call("admin", "POST", `${base}/${plano.id}/waive`, { note: "curta" })).status, 400, "justificativa curta é recusada");
+    const waived = await call("admin", "POST", `${base}/${plano.id}/waive`, { note: "Plano substituído por evidência de testes." });
     assert.equal(waived.status, 200, JSON.stringify(waived.body));
     assert.equal(waived.body.items[1].status, "DISPENSADO");
     assert.equal(waived.body.conformity.conforming, true, "obrigatórios aprovados ou dispensados; o opcional pendente não bloqueia");
+    assert.equal(waived.body.items[1].decidedBy.id, people.admin.id);
+    const audit = await db.execute(
+      sql`select actor_id, payload->>'actorRole' as role, payload->>'note' as note, payload->>'to' as "to" from eap_audit_logs where entity_id = ${plano.id} and payload->>'kind' = 'DELIVERY_ITEM_WAIVED'`,
+    );
+    assert.deepEqual(audit.rows, [{ actor_id: people.admin.id, role: "ADMIN", note: "Plano substituído por evidência de testes.", to: "DISPENSADO" }]);
     assert.equal(manual.required, false);
 
     // Restrições do próprio banco: autoaprovação e alteração do histórico não passam, mesmo fora da API.
