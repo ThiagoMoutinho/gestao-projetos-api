@@ -40,6 +40,7 @@ const BUSINESS_OPERATION_IDS = [
   "addProjectMember",
   "updateProjectMember",
   "removeProjectMember",
+  "listProjectMemberCandidates",
   "listEapPhases",
   "createEapPhase",
   "reorderEapPhases",

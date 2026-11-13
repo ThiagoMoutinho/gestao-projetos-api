@@ -11,6 +11,7 @@ import type {
   UpdateProjectInput,
 } from "./dtos/projects.dto";
 import type { ProjectMemberRole } from "./schemas/projects.schema";
+import type { MemberCandidateDto } from "./use-cases/list-member-candidates";
 
 type ProjectUseCases = {
   createProject: (
@@ -50,6 +51,10 @@ type ProjectUseCases = {
     projectId: string,
     memberId: string,
   ) => Promise<void>;
+  listMemberCandidates: (
+    actor: AuthUser,
+    projectId: string,
+  ) => Promise<{ data: MemberCandidateDto[] }>;
 };
 
 export function makeProjectsController(useCases: ProjectUseCases) {
@@ -89,6 +94,10 @@ export function makeProjectsController(useCases: ProjectUseCases) {
 
     async listMembers(request: FastifyRequest<{ Params: { id: string } }>) {
       return useCases.listProjectMembers(getAuthUser(request), request.params.id);
+    },
+
+    async listMemberCandidates(request: FastifyRequest<{ Params: { id: string } }>) {
+      return useCases.listMemberCandidates(getAuthUser(request), request.params.id);
     },
 
     async addMember(

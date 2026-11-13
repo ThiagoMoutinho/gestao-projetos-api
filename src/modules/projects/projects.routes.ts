@@ -10,6 +10,7 @@ import {
   projectDetailResponseSchema,
   projectIdParamsSchema,
   projectListResponseSchema,
+  memberCandidateListResponseSchema,
   projectMemberListResponseSchema,
   projectMemberParamsSchema,
   projectMemberSchema,
@@ -128,6 +129,24 @@ export function makeProjectsRoutes(
         },
       },
       (request) => controller.listMembers(request),
+    );
+
+    app.get(
+      "/projects/:id/member-candidates",
+      {
+        schema: {
+          operationId: "listProjectMemberCandidates",
+          tags: ["Participantes"],
+          summary: "Usuários ativos que podem compor a equipe (somente quem gerencia participantes)",
+          security: [{ cookieAuth: [] }],
+          params: projectIdParamsSchema,
+          response: {
+            200: memberCandidateListResponseSchema,
+            ...errorResponses,
+          },
+        },
+      },
+      (request) => controller.listMemberCandidates(request),
     );
 
     app.post(

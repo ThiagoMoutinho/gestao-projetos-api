@@ -2,12 +2,14 @@ import type { Database, DbClient } from "../../../db/types";
 import { makeProjectsController } from "../projects.controller";
 import type { ProjectRepos, TransactionRunner } from "../repositories/contracts";
 import { DrizzleProjectAuditRepository } from "../repositories/project-audit.repository";
+import { DrizzleMemberCandidatesRepository } from "../repositories/member-candidates.repository";
 import { DrizzleProjectMembersRepository } from "../repositories/project-members.repository";
 import { DrizzleProjectsRepository } from "../repositories/projects.repository";
 import { DrizzleUsersRepository } from "../repositories/users.repository";
 import { makeAddProjectMemberUseCase } from "../use-cases/add-project-member";
 import { makeCreateProjectUseCase } from "../use-cases/create-project";
 import { makeGetProjectUseCase } from "../use-cases/get-project";
+import { makeListMemberCandidatesUseCase } from "../use-cases/list-member-candidates";
 import { makeListMyProjectsUseCase } from "../use-cases/list-my-projects";
 import { makeListProjectMembersUseCase } from "../use-cases/list-project-members";
 import { makeListProjectsUseCase } from "../use-cases/list-projects";
@@ -44,5 +46,9 @@ export function makeProjectsModule(database: Database) {
     addProjectMember: makeAddProjectMemberUseCase(deps),
     updateProjectMember: makeUpdateProjectMemberUseCase(deps),
     removeProjectMember: makeRemoveProjectMemberUseCase(deps),
+    listMemberCandidates: makeListMemberCandidatesUseCase({
+      repos,
+      candidates: new DrizzleMemberCandidatesRepository(database),
+    }),
   });
 }

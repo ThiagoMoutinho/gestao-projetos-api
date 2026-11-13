@@ -117,6 +117,18 @@ export const projectMemberListResponseSchema = z.object({
   data: z.array(projectMemberSchema),
 });
 
+/** Usuário ativo que pode ser vinculado à equipe (sem dados sensíveis). */
+export const memberCandidateListResponseSchema = z.object({
+  data: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      email: z.string(),
+      role: z.string(),
+    }),
+  ),
+});
+
 export const errorResponses = {
   400: errorResponseSchema,
   401: errorResponseSchema,
