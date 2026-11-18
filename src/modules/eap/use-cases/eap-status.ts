@@ -5,7 +5,7 @@ import type { EapTaskRow } from "../dtos/eap-tasks.dto";
 export type TaskStatus = EapTaskRow["status"];
 export type PhaseStatus = EapPhaseRow["status"];
 
-type TaskFacts = Pick<EapTaskRow, "status" | "progressPercent" | "weight">;
+type TaskFacts = Pick<EapTaskRow, "status" | "progressPercent" | "weight"> & { parentTaskId?: string | null };
 type MilestoneFacts = Pick<EapMilestoneRow, "status">;
 
 export type PhaseProgress =
@@ -25,6 +25,32 @@ export function milestonePercent(status: MilestoneFacts["status"]) {
   return 0;
 }
 
+/**
+ * Subtarefas não entram nos cálculos da fase: a tarefa superior já resume as subtarefas (o andamento dela é
+ * calculado por elas) e contá-las também duplicaria o peso.
+ */
+export function topLevelTasks<T extends { parentTaskId?: string | null }>(tasks: ReadonlyArray<T>): T[] {
+  return tasks.filter((task) => !task.parentTaskId);
+}
+
+/**
+ * Andamento da tarefa superior a partir das subtarefas (decisão do PMO): média ponderada pelo peso (mínimo 1),
+ * sem as canceladas. Sem subtarefa elegível o andamento da superior não é calculado (null).
+ */
+export function parentTaskProgress(subtasks: ReadonlyArray<Pick<EapTaskRow, "status" | "progressPercent" | "weight">>) {
+  let weighted = 0;
+  let weights = 0;
+  for (const subtask of subtasks) {
+    if (subtask.status === "CANCELADA") {
+      continue;
+    }
+    const weight = subtask.weight >= 1 ? subtask.weight : 1;
+    weighted += subtask.progressPercent * weight;
+    weights += weight;
+  }
+  return weights === 0 ? null : Math.round(weighted / weights);
+}
+
 /** 0% → Não iniciada; 1–99% → Em andamento; 100% → Concluída. Cancelamento é decisão explícita e não é derivado. */
 export function deriveTaskStatus(progressPercent: number): Exclude<TaskStatus, "CANCELADA" | "IMPEDIDA"> {
   if (progressPercent >= 100) {
@@ -42,10 +68,10 @@ export function calculatedTaskStatus(task: Pick<EapTaskRow, "status" | "progress
  * Concluída exige todas as tarefas concluídas e todos os marcos aprovados: entrega sem aceite não conclui.
  */
 export function derivePhaseStatus(
-  tasks: ReadonlyArray<Pick<TaskFacts, "status" | "progressPercent">>,
+  tasks: ReadonlyArray<Pick<TaskFacts, "status" | "progressPercent" | "parentTaskId">>,
   milestones: ReadonlyArray<MilestoneFacts>,
 ): Exclude<PhaseStatus, "SUSPENSA"> {
-  const eligible = tasks.filter((task) => task.status !== "CANCELADA");
+  const eligible = topLevelTasks(tasks).filter((task) => task.status !== "CANCELADA");
   if (eligible.length === 0 && milestones.length === 0) {
     return "NAO_INICIADA";
   }
@@ -64,7 +90,7 @@ export function derivePhaseStatus(
 
 export function calculatedPhaseStatus(
   phase: Pick<EapPhaseRow, "status">,
-  tasks: ReadonlyArray<Pick<TaskFacts, "status" | "progressPercent">>,
+  tasks: ReadonlyArray<Pick<TaskFacts, "status" | "progressPercent" | "parentTaskId">>,
   milestones: ReadonlyArray<MilestoneFacts>,
 ): PhaseStatus {
   return phase.status === "SUSPENSA" ? "SUSPENSA" : derivePhaseStatus(tasks, milestones);
@@ -72,9 +98,10 @@ export function calculatedPhaseStatus(
 
 /** Média ponderada: tarefa pelo peso (mínimo 1); marco com peso 1, 50% entregue e 100% aceito. */
 export function phaseProgress(
-  tasks: ReadonlyArray<TaskFacts>,
+  allTasks: ReadonlyArray<TaskFacts>,
   milestones: ReadonlyArray<MilestoneFacts>,
 ): PhaseProgress {
+  const tasks = topLevelTasks(allTasks);
   if (tasks.length === 0 && milestones.length === 0) {
     return { state: "EMPTY", basisPoints: null };
   }
@@ -107,7 +134,7 @@ export type PhaseDates = {
   actualEndAt: Date | null;
 };
 
-type DatedTask = Pick<EapTaskRow, "status" | "plannedStartAt" | "plannedEndAt" | "actualStartAt" | "actualEndAt">;
+type DatedTask = Pick<EapTaskRow, "status" | "plannedStartAt" | "plannedEndAt" | "actualStartAt" | "actualEndAt"> & { parentTaskId?: string | null };
 type DatedMilestone = Pick<EapMilestoneRow, "status" | "plannedAt" | "actualAt">;
 
 function earliest(values: ReadonlyArray<Date | null>) {
@@ -131,7 +158,7 @@ export function phaseDates(
   milestones: ReadonlyArray<DatedMilestone>,
   concluded: boolean,
 ): PhaseDates {
-  const active = tasks.filter((task) => task.status !== "CANCELADA");
+  const active = topLevelTasks(tasks).filter((task) => task.status !== "CANCELADA");
   const milestoneDates = milestones.map((milestone) => milestone.plannedAt);
   return {
     plannedStartAt: earliest([...active.map((task) => task.plannedStartAt), ...milestoneDates]),

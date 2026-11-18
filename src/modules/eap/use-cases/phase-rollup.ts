@@ -10,6 +10,7 @@ import {
   phaseProgress,
   projectProgress,
 } from "./eap-status";
+import { syncParentTasks } from "./task-rollup";
 
 function rollupOf(phase: EapPhaseRow, tasks: EapTaskRow[], milestones: EapMilestoneRow[]): PhaseRollup {
   const calculatedStatus = calculatedPhaseStatus(phase, tasks, milestones);
@@ -67,6 +68,8 @@ export async function syncPhaseStatus(
     return phase;
   }
 
+  // As tarefas com subtarefas são recalculadas antes: a fase conta a superior, não as subtarefas.
+  await syncParentTasks(repos, input);
   const tasks = await repos.tasks.listByPhase(phase.id);
   const milestones = await repos.milestones.listByPhase(phase.id);
   const frozen = phase.status === "SUSPENSA" && !input.resume;

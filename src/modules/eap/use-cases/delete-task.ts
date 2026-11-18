@@ -40,6 +40,14 @@ export function makeDeleteTaskUseCase(deps: {
         );
       }
 
+      const phaseTasks = await txRepos.tasks.listByPhase(phaseId);
+      if (phaseTasks.some((item) => item.parentTaskId === taskId)) {
+        throw deleteBlockedError(
+          "Não é possível excluir esta tarefa porque ela possui subtarefas. Trate as subtarefas antes de continuar.",
+          "TASK_DELETE_HAS_SUBTASKS",
+        );
+      }
+
       const evidences = await txRepos.evidences.listByProject(projectId, { taskId });
       const impediments = await txRepos.tasks.countImpediments(taskId);
       const scheduleRequests = await txRepos.scheduleRequests.countByTarget({ taskId });

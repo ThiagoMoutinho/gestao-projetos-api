@@ -85,6 +85,7 @@ export interface EapPhasesRepository {
 export type NewEapTaskRecord = {
   id: string;
   phaseId: string;
+  parentTaskId?: string | null;
   title: string;
   description: string | null;
   sortOrder: number;

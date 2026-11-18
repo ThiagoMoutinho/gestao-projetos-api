@@ -49,6 +49,16 @@ export function makeUpdateTaskProgressUseCase(deps: {
       );
     }
 
+    // O andamento da tarefa superior é calculado pelas subtarefas e não é informado diretamente.
+    const phaseTasks = await deps.repos.tasks.listByPhase(phaseId);
+    if (phaseTasks.some((task) => task.parentTaskId === taskId)) {
+      throw new HttpError(
+        409,
+        "O andamento desta tarefa é calculado pelas subtarefas. Atualize o andamento das subtarefas.",
+        "TASK_PROGRESS_FROM_SUBTASKS",
+      );
+    }
+
     const progressPercent = input.progressPercent ?? current.progressPercent;
     const status = deriveTaskStatus(progressPercent);
     const justification = normalizeJustification(input.justification);

@@ -4,6 +4,8 @@ import { calculatedTaskStatus } from "../use-cases/eap-status";
 export type EapTaskRow = typeof eapTasks.$inferSelect;
 
 export type CreateTaskInput = {
+  /** Cria a tarefa como subtarefa desta (que deve ser da mesma fase e não pode ser subtarefa). */
+  parentTaskId?: string | null;
   title: string;
   description?: string | null;
   assigneeId?: string | null;
@@ -39,6 +41,7 @@ export type TaskStatusDecisionInput = {
 export type EapTaskDto = {
   id: string;
   phaseId: string;
+  parentTaskId: string | null;
   title: string;
   description: string | null;
   sortOrder: number;
@@ -70,6 +73,7 @@ export function toEapTaskDto(row: EapTaskRow): EapTaskDto {
   return {
     id: row.id,
     phaseId: row.phaseId,
+    parentTaskId: row.parentTaskId,
     title: row.title,
     description: row.description,
     sortOrder: row.sortOrder,

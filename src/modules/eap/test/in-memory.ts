@@ -297,6 +297,7 @@ class InMemoryEapTasksRepository implements EapTasksRepository {
     const now = new Date();
     const row: EapTaskRow = {
       ...data,
+      parentTaskId: data.parentTaskId ?? null,
       progressPercent: data.progressPercent,
       actualStartAt: null,
       actualEndAt: null,

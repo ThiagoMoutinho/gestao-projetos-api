@@ -29,7 +29,10 @@ export function makeReorderTasksUseCase(deps: {
     assertCanStructureTasks(context);
     await loadPhaseInProject(deps.repos, projectId, phaseId);
 
-    const current = await deps.repos.tasks.listByPhase(phaseId);
+    const all = await deps.repos.tasks.listByPhase(phaseId);
+    // A ordem enviada cobre as tarefas de nível principal; as subtarefas seguem a tarefa superior e são renumeradas depois delas.
+    const current = all.filter((task) => !task.parentTaskId);
+    const subtasks = all.filter((task) => task.parentTaskId);
     const currentIds = new Set(current.map((task) => task.id));
     const incomingIds = items.map((item) => item.taskId);
     const uniqueIncomingIds = new Set(incomingIds);
@@ -45,7 +48,12 @@ export function makeReorderTasksUseCase(deps: {
     }
 
     const updated = await deps.runInTransaction(async (txRepos) => {
-      const tasks = await txRepos.tasks.replaceSortOrders(phaseId, items, actor.id, new Date());
+      const subtaskBase = items.reduce((max, item) => Math.max(max, item.sortOrder), -1) + 1;
+      const withSubtasks = [
+        ...items,
+        ...subtasks.map((task, index) => ({ taskId: task.id, sortOrder: subtaskBase + index })),
+      ];
+      const tasks = await txRepos.tasks.replaceSortOrders(phaseId, withSubtasks, actor.id, new Date());
 
       await txRepos.audit.create({
         id: crypto.randomUUID(),

@@ -3,6 +3,7 @@ import type { UpdateTaskInput } from "../dtos/eap-tasks.dto";
 import { toEapTaskDto } from "../dtos/eap-tasks.dto";
 import type { EapRepos, EapTransactionRunner } from "../repositories/contracts";
 import { calculatedTaskStatus } from "./eap-status";
+import { syncPhaseStatus } from "./phase-rollup";
 import {
   assertCanEditTask,
   assertCanView,
@@ -78,6 +79,16 @@ export function makeUpdateTaskUseCase(deps: {
         },
         actorId: actor.id,
       });
+
+      // O peso da subtarefa entra na média que calcula o andamento da tarefa superior.
+      if (input.weight !== undefined && input.weight !== current.weight && current.parentTaskId) {
+        await syncPhaseStatus(txRepos, {
+          projectId,
+          phaseId,
+          actorId: actor.id,
+          cause: `Peso da subtarefa "${updated.title}" alterado.`,
+        });
+      }
 
       return toEapTaskDto(updated);
     });

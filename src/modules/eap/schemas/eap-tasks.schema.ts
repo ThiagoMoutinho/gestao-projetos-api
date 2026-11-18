@@ -29,6 +29,12 @@ export const taskParamsSchema = z.object({
 
 export const createTaskBodySchema = z
   .object({
+    parentTaskId: z
+      .string()
+      .min(1)
+      .nullable()
+      .optional()
+      .describe("Cria a tarefa como subtarefa desta (mesma fase; a superior não pode ser subtarefa)."),
     title: z.string().trim().min(1).max(255),
     description: z.string().trim().max(4000).nullable().optional(),
     assigneeId: z.string().min(1).nullable().optional(),
@@ -105,6 +111,7 @@ export const taskStatusDecisionBodySchema = z
 export const eapTaskSchema = z.object({
   id: z.string(),
   phaseId: z.string(),
+  parentTaskId: z.string().nullable().describe("Tarefa superior, quando esta é uma subtarefa."),
   title: z.string(),
   description: z.string().nullable(),
   sortOrder: z.number().int(),

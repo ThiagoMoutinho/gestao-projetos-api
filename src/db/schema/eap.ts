@@ -180,6 +180,8 @@ export const eapTasks = pgTable(
     phaseId: text("phase_id")
       .notNull()
       .references(() => eapPhases.id, { onDelete: "cascade" }),
+    /** Tarefa superior (só 1 nível: a superior não pode ser subtarefa). Nula nas tarefas de nível principal da fase. */
+    parentTaskId: text("parent_task_id").references((): AnyPgColumn => eapTasks.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
     description: text("description"),
     sortOrder: integer("sort_order").notNull(),
@@ -217,6 +219,8 @@ export const eapTasks = pgTable(
     unique("eap_tasks_phase_sort_order_unique").on(table.phaseId, table.sortOrder),
     check("eap_tasks_sort_order_chk", sql`${table.sortOrder} >= 0`),
     index("eap_tasks_phase_id_idx").on(table.phaseId),
+    index("eap_tasks_parent_task_id_idx").on(table.parentTaskId),
+    check("eap_tasks_parent_not_self_chk", sql`${table.parentTaskId} IS NULL OR ${table.parentTaskId} <> ${table.id}`),
     index("eap_tasks_assignee_id_idx").on(table.assigneeId),
     index("eap_tasks_corrective_milestone_id_idx").on(table.correctiveMilestoneId),
     index("eap_tasks_status_planned_end_idx").on(table.status, table.plannedEndAt),
