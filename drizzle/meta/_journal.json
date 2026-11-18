@@ -239,6 +239,13 @@
       "when": 1795026298160,
       "tag": "0033_eap_task_parent",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1795031284271,
+      "tag": "0034_eap_task_secondary_assignee",
+      "breakpoints": true
     }
   ]
 }

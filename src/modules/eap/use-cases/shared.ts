@@ -400,6 +400,46 @@ export async function assertValidAssignee(
   }
 }
 
+/**
+ * Responsável principal e segundo responsável (opcional, apoio) da tarefa. O segundo exige o principal, deve ser outra
+ * pessoa e, como o principal, participante habilitado do projeto. Ele não ganha permissão extra sobre a tarefa.
+ */
+export async function assertValidTaskAssignees(
+  repos: EapRepos,
+  projectId: string,
+  ownerId: string,
+  assigneeId: string | null | undefined,
+  secondaryAssigneeId: string | null | undefined,
+) {
+  assertTaskAssigneePair(assigneeId, secondaryAssigneeId);
+  await assertValidAssignee(repos, projectId, ownerId, assigneeId);
+  await assertValidAssignee(repos, projectId, ownerId, secondaryAssigneeId);
+}
+
+/** Regras do par de responsáveis, sem consulta ao banco: o segundo exige o principal e é outra pessoa. */
+export function assertTaskAssigneePair(
+  assigneeId: string | null | undefined,
+  secondaryAssigneeId: string | null | undefined,
+) {
+  if (secondaryAssigneeId == null) {
+    return;
+  }
+  if (assigneeId == null) {
+    throw new HttpError(
+      400,
+      "Informe o responsável principal antes do segundo responsável.",
+      "TASK_SECONDARY_ASSIGNEE_REQUIRES_PRIMARY",
+    );
+  }
+  if (secondaryAssigneeId === assigneeId) {
+    throw new HttpError(
+      400,
+      "O segundo responsável deve ser uma pessoa diferente do responsável principal.",
+      "TASK_SECONDARY_ASSIGNEE_SAME",
+    );
+  }
+}
+
 export function normalizeOptionalText(value: string | null | undefined) {
   if (value === undefined) {
     return undefined;

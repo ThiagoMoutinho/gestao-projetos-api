@@ -43,6 +43,7 @@ function newTaskRecord({ source, phaseId, parentTaskId, title, sortOrder, actorI
     description: source.description,
     sortOrder,
     assigneeId: source.assigneeId,
+    secondaryAssigneeId: source.secondaryAssigneeId,
     status: "NAO_INICIADA" as const,
     progressPercent: 0,
     weight: source.weight,

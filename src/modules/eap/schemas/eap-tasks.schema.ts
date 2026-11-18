@@ -38,6 +38,12 @@ export const createTaskBodySchema = z
     title: z.string().trim().min(1).max(255),
     description: z.string().trim().max(4000).nullable().optional(),
     assigneeId: z.string().min(1).nullable().optional(),
+    secondaryAssigneeId: z
+      .string()
+      .min(1)
+      .nullable()
+      .optional()
+      .describe("Segundo responsável (opcional, apoio): exige o responsável principal e deve ser outra pessoa."),
     weight: z.number().int().min(1).optional(),
     priority: eapTaskPrioritySchema.optional().describe("Padrão: NORMAL."),
     plannedStartAt: isoDateTimeSchema
@@ -70,6 +76,7 @@ export const updateTaskBodySchema = z
     title: z.string().trim().min(1).max(255).optional(),
     description: z.string().trim().max(4000).nullable().optional(),
     assigneeId: z.string().min(1).nullable().optional(),
+    secondaryAssigneeId: z.string().min(1).nullable().optional(),
     weight: z.number().int().min(1).optional(),
     priority: eapTaskPrioritySchema.optional(),
   })
@@ -116,6 +123,7 @@ export const eapTaskSchema = z.object({
   description: z.string().nullable(),
   sortOrder: z.number().int(),
   assigneeId: z.string().nullable(),
+  secondaryAssigneeId: z.string().nullable().describe("Segundo responsável (apoio), quando houver."),
   status: eapTaskStatusSchema,
   progressPercent: z.number().int(),
   weight: z.number().int(),

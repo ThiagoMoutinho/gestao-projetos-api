@@ -1,0 +1,4 @@
+ALTER TABLE "eap_tasks" ADD COLUMN "secondary_assignee_id" text;--> statement-breakpoint
+ALTER TABLE "eap_tasks" ADD CONSTRAINT "eap_tasks_secondary_assignee_id_user_id_fk" FOREIGN KEY ("secondary_assignee_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "eap_tasks_secondary_assignee_id_idx" ON "eap_tasks" USING btree ("secondary_assignee_id");--> statement-breakpoint
+ALTER TABLE "eap_tasks" ADD CONSTRAINT "eap_tasks_secondary_assignee_chk" CHECK ("eap_tasks"."secondary_assignee_id" IS NULL OR ("eap_tasks"."assignee_id" IS NOT NULL AND "eap_tasks"."secondary_assignee_id" <> "eap_tasks"."assignee_id"));

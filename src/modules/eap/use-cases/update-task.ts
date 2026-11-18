@@ -7,6 +7,7 @@ import { syncPhaseStatus } from "./phase-rollup";
 import {
   assertCanEditTask,
   assertCanView,
+  assertTaskAssigneePair,
   assertValidAssignee,
   concludedItemLockedError,
   loadPhaseInProject,
@@ -38,8 +39,19 @@ export function makeUpdateTaskUseCase(deps: {
       throw concludedItemLockedError("tarefa");
     }
 
-    if (input.assigneeId !== undefined) {
-      await assertValidAssignee(deps.repos, projectId, project.ownerId, input.assigneeId);
+    if (input.assigneeId !== undefined || input.secondaryAssigneeId !== undefined) {
+      // Só quem está sendo informado é conferido como participante: o outro responsável, já gravado, não bloqueia uma
+      // edição sem relação (por exemplo, tarefa antiga cujo responsável deixou o projeto). O par resultante é validado.
+      if (input.assigneeId !== undefined) {
+        await assertValidAssignee(deps.repos, projectId, project.ownerId, input.assigneeId);
+      }
+      if (input.secondaryAssigneeId !== undefined) {
+        await assertValidAssignee(deps.repos, projectId, project.ownerId, input.secondaryAssigneeId);
+      }
+      assertTaskAssigneePair(
+        input.assigneeId !== undefined ? input.assigneeId : current.assigneeId,
+        input.secondaryAssigneeId !== undefined ? input.secondaryAssigneeId : current.secondaryAssigneeId,
+      );
     }
 
     const priorityChanged = input.priority !== undefined && input.priority !== current.priority;
@@ -49,6 +61,7 @@ export function makeUpdateTaskUseCase(deps: {
         ...(input.title !== undefined ? { title: input.title } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.assigneeId !== undefined ? { assigneeId: input.assigneeId } : {}),
+        ...(input.secondaryAssigneeId !== undefined ? { secondaryAssigneeId: input.secondaryAssigneeId } : {}),
         ...(input.weight !== undefined ? { weight: input.weight } : {}),
         ...(input.priority !== undefined ? { priority: input.priority } : {}),
         updatedBy: actor.id,
@@ -73,6 +86,7 @@ export function makeUpdateTaskUseCase(deps: {
           title: input.title,
           description: input.description,
           assigneeId: input.assigneeId,
+          secondaryAssigneeId: input.secondaryAssigneeId,
           weight: input.weight,
           priority: priorityChanged ? updated.priority : undefined,
           previousPriority: priorityChanged ? current.priority : undefined,

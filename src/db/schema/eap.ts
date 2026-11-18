@@ -186,6 +186,8 @@ export const eapTasks = pgTable(
     description: text("description"),
     sortOrder: integer("sort_order").notNull(),
     assigneeId: text("assignee_id").references(() => user.id),
+    /** Segundo responsável (opcional, apoio): só existe com o responsável principal e é outra pessoa. Não ganha permissão extra. */
+    secondaryAssigneeId: text("secondary_assignee_id").references(() => user.id),
     status: eapTaskStatusEnum("status").default("NAO_INICIADA").notNull(),
     progressPercent: integer("progress_percent").default(0).notNull(),
     weight: integer("weight").default(1).notNull(),
@@ -222,6 +224,11 @@ export const eapTasks = pgTable(
     index("eap_tasks_parent_task_id_idx").on(table.parentTaskId),
     check("eap_tasks_parent_not_self_chk", sql`${table.parentTaskId} IS NULL OR ${table.parentTaskId} <> ${table.id}`),
     index("eap_tasks_assignee_id_idx").on(table.assigneeId),
+    index("eap_tasks_secondary_assignee_id_idx").on(table.secondaryAssigneeId),
+    check(
+      "eap_tasks_secondary_assignee_chk",
+      sql`${table.secondaryAssigneeId} IS NULL OR (${table.assigneeId} IS NOT NULL AND ${table.secondaryAssigneeId} <> ${table.assigneeId})`,
+    ),
     index("eap_tasks_corrective_milestone_id_idx").on(table.correctiveMilestoneId),
     index("eap_tasks_status_planned_end_idx").on(table.status, table.plannedEndAt),
     check(

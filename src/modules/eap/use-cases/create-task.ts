@@ -10,7 +10,7 @@ import {
   assertCanCreateItems,
   assertCanView,
   assertRequiredPlannedRange,
-  assertValidAssignee,
+  assertValidTaskAssignees,
   loadMilestoneInPhase,
   loadPhaseInProject,
   loadProjectAccess,
@@ -63,7 +63,7 @@ export function makeCreateTaskUseCase(deps: {
       assertRequiredPlannedRange(plannedStartAt, plannedEndAt);
     }
 
-    await assertValidAssignee(deps.repos, projectId, project.ownerId, input.assigneeId);
+    await assertValidTaskAssignees(deps.repos, projectId, project.ownerId, input.assigneeId, input.secondaryAssigneeId);
 
     const correctiveMilestoneId = input.correctiveMilestoneId ?? null;
     if (correctiveMilestoneId) {
@@ -90,6 +90,7 @@ export function makeCreateTaskUseCase(deps: {
         description: input.description ?? null,
         sortOrder: Math.max(taskMax ?? -1, milestoneMax ?? -1) + 1,
         assigneeId: input.assigneeId ?? null,
+        secondaryAssigneeId: input.secondaryAssigneeId ?? null,
         status: "NAO_INICIADA",
         progressPercent: 0,
         weight: input.weight ?? 1,
@@ -114,6 +115,7 @@ export function makeCreateTaskUseCase(deps: {
           phaseId,
           parentTaskId,
           assigneeId: task.assigneeId,
+          secondaryAssigneeId: task.secondaryAssigneeId,
           weight: task.weight,
           priority: task.priority,
           status: task.status,

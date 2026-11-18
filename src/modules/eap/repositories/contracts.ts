@@ -90,6 +90,7 @@ export type NewEapTaskRecord = {
   description: string | null;
   sortOrder: number;
   assigneeId: string | null;
+  secondaryAssigneeId?: string | null;
   status: EapTaskRow["status"];
   progressPercent: number;
   weight: number;
@@ -107,6 +108,7 @@ export type EapTaskUpdateRecord = {
   title?: string;
   description?: string | null;
   assigneeId?: string | null;
+  secondaryAssigneeId?: string | null;
   weight?: number;
   priority?: EapTaskRow["priority"];
   status?: EapTaskRow["status"];

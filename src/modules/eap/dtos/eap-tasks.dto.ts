@@ -9,6 +9,7 @@ export type CreateTaskInput = {
   title: string;
   description?: string | null;
   assigneeId?: string | null;
+  secondaryAssigneeId?: string | null;
   weight?: number;
   priority?: EapTaskRow["priority"];
   plannedStartAt?: string | null;
@@ -23,6 +24,7 @@ export type UpdateTaskInput = {
   title?: string;
   description?: string | null;
   assigneeId?: string | null;
+  secondaryAssigneeId?: string | null;
   weight?: number;
   priority?: EapTaskRow["priority"];
 };
@@ -46,6 +48,7 @@ export type EapTaskDto = {
   description: string | null;
   sortOrder: number;
   assigneeId: string | null;
+  secondaryAssigneeId: string | null;
   status: EapTaskRow["status"];
   progressPercent: number;
   weight: number;
@@ -78,6 +81,7 @@ export function toEapTaskDto(row: EapTaskRow): EapTaskDto {
     description: row.description,
     sortOrder: row.sortOrder,
     assigneeId: row.assigneeId,
+    secondaryAssigneeId: row.secondaryAssigneeId,
     status: row.status,
     progressPercent: row.progressPercent,
     weight: row.weight,
