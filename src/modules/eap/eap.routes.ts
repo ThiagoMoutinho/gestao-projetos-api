@@ -124,6 +124,26 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
     );
 
     app.post(
+      "/projects/:id/phases/:phaseId/duplicate",
+      {
+        schema: {
+          operationId: "duplicateEapPhase",
+          tags: ["EAP"],
+          summary: "Duplicar fase",
+          description:
+            "Cópia limpa da fase com as tarefas, subtarefas e marcos dela, ao final da lista de fases. Tudo nasce não iniciado, sem datas reais, evidências ou histórico. Exige permissão de criar itens.",
+          security: [{ cookieAuth: [] }],
+          params: phaseParamsSchema,
+          response: {
+            201: eapPhaseSchema,
+            ...errorResponses,
+          },
+        },
+      },
+      (request, reply) => controller.duplicatePhase(request, reply),
+    );
+
+    app.post(
       "/projects/:id/eap/import",
       {
         schema: {
@@ -280,6 +300,26 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
         },
       },
       (request, reply) => controller.createTask(request, reply),
+    );
+
+    app.post(
+      "/projects/:id/phases/:phaseId/tasks/:taskId/duplicate",
+      {
+        schema: {
+          operationId: "duplicateEapTask",
+          tags: ["EAP"],
+          summary: "Duplicar tarefa",
+          description:
+            "Cópia limpa: nome com (cópia), descrição, responsável, prioridade, peso e datas planejadas; nasce não iniciada, sem datas reais, evidências ou histórico. Leva as subtarefas. Exige permissão de criar itens.",
+          security: [{ cookieAuth: [] }],
+          params: taskParamsSchema,
+          response: {
+            201: eapTaskSchema,
+            ...taskErrorResponses,
+          },
+        },
+      },
+      (request, reply) => controller.duplicateTask(request, reply),
     );
 
     app.patch(
@@ -554,6 +594,26 @@ export function makeEapRoutes(controller: EapController): FastifyPluginAsyncZod 
         },
       },
       (request, reply) => controller.createMilestone(request, reply),
+    );
+
+    app.post(
+      "/projects/:id/phases/:phaseId/milestones/:milestoneId/duplicate",
+      {
+        schema: {
+          operationId: "duplicateEapMilestone",
+          tags: ["EAP"],
+          summary: "Duplicar marco",
+          description:
+            "Cópia limpa: nome com (cópia), descrição, tipo, data prevista, validador e apresentador; nasce pendente, sem entregas, decisões ou histórico. Exige permissão de criar itens.",
+          security: [{ cookieAuth: [] }],
+          params: milestoneParamsSchema,
+          response: {
+            201: eapMilestoneSchema,
+            ...milestoneErrorResponses,
+          },
+        },
+      },
+      (request, reply) => controller.duplicateMilestone(request, reply),
     );
 
     app.get(

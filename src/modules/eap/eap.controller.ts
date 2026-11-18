@@ -184,6 +184,9 @@ type EapPhaseUseCases = {
     phaseId: string,
     input: CreateMilestoneInput,
   ) => Promise<EapMilestoneDto>;
+  duplicateTask: (actor: AuthUser, projectId: string, phaseId: string, taskId: string) => Promise<EapTaskDto>;
+  duplicateMilestone: (actor: AuthUser, projectId: string, phaseId: string, milestoneId: string) => Promise<EapMilestoneDto>;
+  duplicatePhase: (actor: AuthUser, projectId: string, phaseId: string) => Promise<EapPhaseDto>;
   updateMilestone: (
     actor: AuthUser,
     projectId: string,
@@ -610,6 +613,40 @@ export function makeEapController(useCases: EapPhaseUseCases) {
         request.params.phaseId,
         request.params.milestoneId,
       );
+    },
+
+    async duplicateTask(
+      request: FastifyRequest<{ Params: { id: string; phaseId: string; taskId: string } }>,
+      reply: FastifyReply,
+    ) {
+      const task = await useCases.duplicateTask(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+        request.params.taskId,
+      );
+      return reply.status(201).send(task);
+    },
+
+    async duplicateMilestone(
+      request: FastifyRequest<{ Params: { id: string; phaseId: string; milestoneId: string } }>,
+      reply: FastifyReply,
+    ) {
+      const milestone = await useCases.duplicateMilestone(
+        getAuthUser(request),
+        request.params.id,
+        request.params.phaseId,
+        request.params.milestoneId,
+      );
+      return reply.status(201).send(milestone);
+    },
+
+    async duplicatePhase(
+      request: FastifyRequest<{ Params: { id: string; phaseId: string } }>,
+      reply: FastifyReply,
+    ) {
+      const phase = await useCases.duplicatePhase(getAuthUser(request), request.params.id, request.params.phaseId);
+      return reply.status(201).send(phase);
     },
 
     async createMilestone(

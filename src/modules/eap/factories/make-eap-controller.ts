@@ -18,6 +18,7 @@ import { makeAuthorizeResubmissionUseCase } from "../use-cases/authorize-resubmi
 import { makeCancelTaskUseCase } from "../use-cases/cancel-task";
 import { makeCreateEvidenceUseCase } from "../use-cases/create-evidence";
 import { makeCreateMilestoneUseCase } from "../use-cases/create-milestone";
+import { makeDuplicateMilestoneUseCase, makeDuplicatePhaseUseCase, makeDuplicateTaskUseCase } from "../use-cases/duplicate-items";
 import { makeCreatePhaseUseCase } from "../use-cases/create-phase";
 import { makeCreateTaskUseCase } from "../use-cases/create-task";
 import { makeDeleteMilestoneUseCase } from "../use-cases/delete-milestone";
@@ -113,6 +114,9 @@ export function makeEapModule(database: Database) {
     listMilestones: makeListMilestonesUseCase(deps),
     getMilestone: makeGetMilestoneUseCase(deps),
     createMilestone: makeCreateMilestoneUseCase(deps),
+    duplicateTask: makeDuplicateTaskUseCase(deps),
+    duplicateMilestone: makeDuplicateMilestoneUseCase(deps),
+    duplicatePhase: makeDuplicatePhaseUseCase(deps),
     updateMilestone: makeUpdateMilestoneUseCase(deps),
     deliverMilestone: makeDeliverMilestoneUseCase(deps),
     reviewMilestone: makeReviewMilestoneUseCase(deps),
