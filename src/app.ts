@@ -25,6 +25,7 @@ import { makeUserAdminModule, makeUserAdminRoutes } from "./modules/user-admin/u
 import { makeInstitutionalModule } from "./modules/institutional/factories/make-institutional-module";
 import { makeInstitutionalRoutes } from "./modules/institutional/institutional.routes";
 import { makeOverviewLayoutModule, makeOverviewLayoutRoutes } from "./modules/overview-layout/overview-layout.routes";
+import { makeSearchModule, makeSearchRoutes } from "./modules/search/search.routes";
 import { makeProjectsRoutes } from "./modules/projects/projects.routes";
 
 export async function buildApp() {
@@ -202,6 +203,7 @@ export async function buildApp() {
   const institutionalController = makeInstitutionalModule(db);
   await app.register(makeInstitutionalRoutes(institutionalController));
   await app.register(makeOverviewLayoutRoutes(makeOverviewLayoutModule(db)));
+  await app.register(makeSearchRoutes(makeSearchModule(db)));
   await app.register(makeBusinessCalendarRoutes(makeBusinessCalendarModule(db)));
   await app.register(makeNotificationsRoutes(makeNotificationsModule(db)));
   await app.register(makeUserAdminRoutes(makeUserAdminModule(db)));
