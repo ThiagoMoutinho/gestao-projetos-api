@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  boolean,
   check,
   index,
   pgEnum,
@@ -7,6 +8,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 import { user } from "./auth-schema";
@@ -68,6 +70,29 @@ export const projects = pgTable(
   ],
 );
 
+/**
+ * Catálogo único do instituto de funções de participante que não são papéis de acesso (ex.: Stakeholder). A função é só um
+ * rótulo: quem a recebe tem o acesso de Observador (leitura). Criada por ADMIN ou PMO; desativar não apaga o histórico.
+ */
+export const projectMemberFunctions = pgTable(
+  "project_member_functions",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    /** Nome sem acento, em minúsculas e sem espaços repetidos: impede duplicatas ("Stakeholder" = "stakeholder "). */
+    nameKey: text("name_key").notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => user.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("project_member_functions_name_key_uq").on(table.nameKey),
+    check("project_member_functions_name_chk", sql`char_length(btrim(${table.name})) BETWEEN 2 AND 60`),
+  ],
+);
+
 export const projectMembers = pgTable(
   "project_members",
   {
@@ -79,6 +104,8 @@ export const projectMembers = pgTable(
       .notNull()
       .references(() => user.id),
     role: projectMemberRoleEnum("role").notNull(),
+    /** Função do catálogo (rótulo). Só existe junto do acesso de Observador; nula nos papéis de acesso comuns. */
+    functionId: text("function_id").references(() => projectMemberFunctions.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
@@ -89,6 +116,8 @@ export const projectMembers = pgTable(
     ),
     index("project_members_project_id_idx").on(table.projectId),
     index("project_members_user_id_idx").on(table.userId),
+    index("project_members_function_id_idx").on(table.functionId),
+    check("project_members_function_role_chk", sql`${table.functionId} IS NULL OR ${table.role} = 'OBSERVADOR'`),
   ],
 );
 
