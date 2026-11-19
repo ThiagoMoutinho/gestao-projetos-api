@@ -44,7 +44,7 @@ type ProjectUseCases = {
     actor: AuthUser,
     projectId: string,
     memberId: string,
-    input: { role: ProjectMemberRole },
+    input: { role: ProjectMemberRole; functionId?: string | null },
   ) => Promise<ProjectMemberDto>;
   removeProjectMember: (
     actor: AuthUser,
@@ -118,7 +118,7 @@ export function makeProjectsController(useCases: ProjectUseCases) {
     async updateMember(
       request: FastifyRequest<{
         Params: { id: string; memberId: string };
-        Body: { role: ProjectMemberRole };
+        Body: { role: ProjectMemberRole; functionId?: string | null };
       }>,
     ) {
       return useCases.updateProjectMember(

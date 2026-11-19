@@ -2,7 +2,8 @@ import type { projectMembers, projects, user } from "../../../db/schema";
 import type { ProjectMemberRole } from "../schemas/projects.schema";
 
 export type ProjectRow = typeof projects.$inferSelect;
-export type ProjectMemberRow = typeof projectMembers.$inferSelect;
+/** Linha de participante. `functionId` é opcional aqui para os testes e fixtures que não usam funções do catálogo. */
+export type ProjectMemberRow = Omit<typeof projectMembers.$inferSelect, "functionId"> & { functionId?: string | null };
 export type UserRow = typeof user.$inferSelect;
 
 export type CreateProjectInput = {
@@ -25,6 +26,8 @@ export type UpdateProjectInput = {
 export type AddProjectMemberInput = {
   userId: string;
   role: ProjectMemberRole;
+  /** Função do catálogo (só com o acesso de Observador). */
+  functionId?: string | null;
 };
 
 export type UserSummaryDto = {
@@ -66,6 +69,8 @@ export type ProjectMemberDto = {
   projectId: string;
   userId: string;
   role: ProjectMemberRole;
+  /** Função do catálogo exibida no lugar do rótulo do acesso; nula nos papéis de acesso comuns. */
+  function: { id: string; name: string } | null;
   createdAt: string;
   user: UserSummaryDto;
 };
@@ -130,12 +135,14 @@ export function toProjectDetail(
 export function toProjectMemberDto(
   row: ProjectMemberRow,
   memberUser: UserRow,
+  fn: { id: string; name: string } | null = null,
 ): ProjectMemberDto {
   return {
     id: row.id,
     projectId: row.projectId,
     userId: row.userId,
     role: row.role,
+    function: fn,
     createdAt: row.createdAt.toISOString(),
     user: toUserSummary(memberUser),
   };

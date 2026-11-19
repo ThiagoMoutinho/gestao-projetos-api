@@ -58,10 +58,12 @@ export const updateProjectBodySchema = z
 export const addProjectMemberBodySchema = z.object({
   userId: z.string().min(1),
   role: projectMemberRoleSchema,
+  functionId: z.string().min(1).nullable().optional().describe("Função do catálogo (só com o acesso de Observador)."),
 });
 
 export const updateProjectMemberBodySchema = z.object({
   role: projectMemberRoleSchema,
+  functionId: z.string().min(1).nullable().optional().describe("Função do catálogo; omitida, mantém a atual quando o acesso continua Observador."),
 });
 
 export const userSummarySchema = z.object({
@@ -103,6 +105,7 @@ export const projectMemberSchema = z.object({
   projectId: z.string(),
   userId: z.string(),
   role: projectMemberRoleSchema,
+  function: z.object({ id: z.string(), name: z.string() }).nullable(),
   createdAt: z.string(),
   user: userSummarySchema,
 });

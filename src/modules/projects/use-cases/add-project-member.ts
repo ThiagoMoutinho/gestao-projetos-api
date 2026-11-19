@@ -8,6 +8,7 @@ import {
   assertCanManageMembers,
   duplicateMemberError,
   loadProjectAccess,
+  resolveMemberFunction,
 } from "./shared";
 
 export function makeAddProjectMemberUseCase(deps: {
@@ -27,6 +28,8 @@ export function makeAddProjectMemberUseCase(deps: {
       throw new HttpError(404, "Usuário não encontrado.", "USER_NOT_FOUND");
     }
 
+    const memberFunction = await resolveMemberFunction(deps.repos, input.role, input.functionId);
+
     const duplicate = await deps.repos.members.findByProjectUserRole(
       projectId,
       input.userId,
@@ -44,6 +47,7 @@ export function makeAddProjectMemberUseCase(deps: {
           projectId,
           userId: input.userId,
           role: input.role,
+          functionId: memberFunction?.id ?? null,
         });
 
         await txRepos.audit.create({
@@ -51,12 +55,13 @@ export function makeAddProjectMemberUseCase(deps: {
           entityType: "PROJECT_MEMBER",
           entityId: row.id,
           action: "MEMBER_ADD",
-          summary: `${memberUser.name} incluído(a) no projeto como ${row.role}.`,
+          summary: `${memberUser.name} incluído(a) no projeto como ${memberFunction ? `${memberFunction.name} (${row.role})` : row.role}.`,
           payload: {
             memberId: row.id,
             userId: row.userId,
             userName: memberUser.name,
             role: row.role,
+            ...(memberFunction ? { functionId: memberFunction.id, functionName: memberFunction.name } : {}),
           },
           actorId: actor.id,
         });
@@ -64,7 +69,7 @@ export function makeAddProjectMemberUseCase(deps: {
         return row;
       });
 
-      return toProjectMemberDto(created, memberUser);
+      return toProjectMemberDto(created, memberUser, memberFunction);
     } catch (error) {
       if (error instanceof UniqueConstraintError) {
         throw duplicateMemberError();

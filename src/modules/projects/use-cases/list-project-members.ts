@@ -10,7 +10,7 @@ export function makeListProjectMembersUseCase(deps: { repos: ProjectRepos }) {
 
     const rows = await deps.repos.members.listByProject(projectId);
     return {
-      data: rows.map((row) => toProjectMemberDto(row.member, row.user)),
+      data: rows.map((row) => toProjectMemberDto(row.member, row.user, row.fn ?? null)),
     };
   };
 }

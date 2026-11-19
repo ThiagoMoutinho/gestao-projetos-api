@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 
-import { projectMembers, user } from "../../../db/schema";
+import { projectMemberFunctions, projectMembers, user } from "../../../db/schema";
 import type { DbClient } from "../../../db/types";
 import {
   isUniqueViolation,
@@ -41,13 +41,20 @@ export class DrizzleProjectMembersRepository implements ProjectMembersRepository
       .select({
         member: projectMembers,
         user,
+        fnId: projectMemberFunctions.id,
+        fnName: projectMemberFunctions.name,
       })
       .from(projectMembers)
       .innerJoin(user, eq(user.id, projectMembers.userId))
+      .leftJoin(projectMemberFunctions, eq(projectMemberFunctions.id, projectMembers.functionId))
       .where(eq(projectMembers.projectId, projectId))
       .orderBy(desc(projectMembers.createdAt));
 
-    return rows;
+    return rows.map(({ member, user: memberUser, fnId, fnName }) => ({
+      member,
+      user: memberUser,
+      fn: fnId && fnName ? { id: fnId, name: fnName } : null,
+    }));
   }
 
   async findByProjectUserRole(
@@ -93,11 +100,21 @@ export class DrizzleProjectMembersRepository implements ProjectMembersRepository
     }
   }
 
-  async updateRole(memberId: string, role: ProjectMemberRole) {
+  async findFunction(functionId: string) {
+    const [row] = await this.client
+      .select({ id: projectMemberFunctions.id, name: projectMemberFunctions.name, isActive: projectMemberFunctions.isActive })
+      .from(projectMemberFunctions)
+      .where(eq(projectMemberFunctions.id, functionId))
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  async updateRole(memberId: string, role: ProjectMemberRole, functionId?: string | null) {
     try {
       const [row] = await this.client
         .update(projectMembers)
-        .set({ role })
+        .set({ role, functionId: functionId ?? null })
         .where(eq(projectMembers.id, memberId))
         .returning();
 

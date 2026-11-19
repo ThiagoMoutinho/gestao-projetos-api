@@ -9,6 +9,7 @@ import {
   assertCanManageMembers,
   duplicateMemberError,
   loadProjectAccess,
+  resolveMemberFunction,
 } from "./shared";
 
 export function makeUpdateProjectMemberUseCase(deps: {
@@ -19,7 +20,7 @@ export function makeUpdateProjectMemberUseCase(deps: {
     actor: AuthUser,
     projectId: string,
     memberId: string,
-    input: { role: ProjectMemberRole },
+    input: { role: ProjectMemberRole; functionId?: string | null },
   ) {
     const { project, context } = await loadProjectAccess(
       deps.repos,
@@ -45,6 +46,11 @@ export function makeUpdateProjectMemberUseCase(deps: {
       );
     }
 
+    // Sem functionId, o acesso Observador mantém a função atual; qualquer outro acesso a limpa.
+    const targetFunctionId =
+      input.functionId !== undefined ? input.functionId : input.role === "OBSERVADOR" ? (member.functionId ?? null) : null;
+    const memberFunction = await resolveMemberFunction(deps.repos, input.role, targetFunctionId, member.functionId ?? null);
+
     const duplicate = await deps.repos.members.findByProjectUserRole(
       projectId,
       member.userId,
@@ -61,25 +67,33 @@ export function makeUpdateProjectMemberUseCase(deps: {
         throw new HttpError(404, "Usuário não encontrado.", "USER_NOT_FOUND");
       }
 
-      if (member.role === input.role) {
-        return toProjectMemberDto(member, memberUser);
+      if (member.role === input.role && (memberFunction?.id ?? null) === (member.functionId ?? null)) {
+        return toProjectMemberDto(member, memberUser, memberFunction);
       }
 
       const updated = await deps.runInTransaction(async (txRepos) => {
-        const row = await txRepos.members.updateRole(memberId, input.role);
+        const row = await txRepos.members.updateRole(memberId, input.role, memberFunction?.id ?? null);
 
         await txRepos.audit.create({
           projectId,
           entityType: "PROJECT_MEMBER",
           entityId: row.id,
           action: "MEMBER_UPDATE",
-          summary: `Função de ${memberUser.name} alterada de ${member.role} para ${row.role}.`,
+          summary: `Função de ${memberUser.name} alterada de ${member.role} para ${memberFunction ? `${memberFunction.name} (${row.role})` : row.role}.`,
           payload: {
             memberId: row.id,
             userId: row.userId,
             userName: memberUser.name,
             fromRole: member.role,
             toRole: row.role,
+            // Só entra no registro quando uma função do catálogo participa da troca (o formato antigo não muda).
+            ...((member.functionId ?? null) !== null || memberFunction
+              ? {
+                  fromFunctionId: member.functionId ?? null,
+                  toFunctionId: memberFunction?.id ?? null,
+                  toFunctionName: memberFunction?.name ?? null,
+                }
+              : {}),
           },
           actorId: actor.id,
         });
@@ -87,7 +101,7 @@ export function makeUpdateProjectMemberUseCase(deps: {
         return row;
       });
 
-      return toProjectMemberDto(updated, memberUser);
+      return toProjectMemberDto(updated, memberUser, memberFunction);
     } catch (error) {
       if (error instanceof UniqueConstraintError) {
         throw duplicateMemberError();

@@ -7,6 +7,7 @@ import {
   canViewProject,
 } from "../projects.authorization";
 import type { ProjectRepos } from "../repositories/contracts";
+import type { ProjectMemberRole } from "../schemas/projects.schema";
 
 export async function loadProjectAccess(
   repos: ProjectRepos,
@@ -126,4 +127,34 @@ export async function recordProjectStatusChange(
     payload: { automatic: false, from: data.from, to: data.to },
     actorId: data.actorId,
   });
+}
+
+/**
+ * Valida a função do catálogo de um participante. A função é só rótulo: exige o acesso de Observador, tem de existir e estar
+ * ativa (a que o participante já tem continua válida mesmo desativada). Devolve o resumo para exibir/auditar ou null.
+ */
+export async function resolveMemberFunction(
+  repos: ProjectRepos,
+  role: ProjectMemberRole,
+  functionId: string | null | undefined,
+  currentFunctionId: string | null = null,
+) {
+  if (!functionId) {
+    return null;
+  }
+  if (role !== "OBSERVADOR") {
+    throw new HttpError(
+      400,
+      "A função do catálogo só pode ser usada com o acesso de Observador.",
+      "MEMBER_FUNCTION_REQUIRES_OBSERVER",
+    );
+  }
+  const found = await repos.members.findFunction(functionId);
+  if (!found) {
+    throw new HttpError(404, "Função não encontrada.", "MEMBER_FUNCTION_NOT_FOUND");
+  }
+  if (!found.isActive && found.id !== currentFunctionId) {
+    throw new HttpError(409, "Essa função está desativada.", "MEMBER_FUNCTION_INACTIVE");
+  }
+  return { id: found.id, name: found.name };
 }

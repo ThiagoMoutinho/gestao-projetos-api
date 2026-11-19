@@ -24,6 +24,8 @@ export type InMemoryStore = {
   users: UserRow[];
   projects: ProjectRow[];
   members: ProjectMemberRow[];
+  /** Catálogo de funções de participante usado nos testes; ausente = vazio. */
+  memberFunctions?: Array<{ id: string; name: string; isActive: boolean }>;
   audit: InMemoryAuditEntry[];
 };
 
@@ -40,6 +42,7 @@ export function createInMemoryStore(seed?: Partial<InMemoryStore>): InMemoryStor
     users: seed?.users ?? [],
     projects: seed?.projects ?? [],
     members: seed?.members ?? [],
+    memberFunctions: seed?.memberFunctions ?? [],
     audit: seed?.audit ?? [],
   };
 }
@@ -133,7 +136,8 @@ class InMemoryProjectMembersRepository implements ProjectMembersRepository {
           throw new Error(`User ${member.userId} not found`);
         }
 
-        return { member, user };
+        const found = this.store.memberFunctions?.find((row) => row.id === member.functionId);
+        return { member, user, fn: found ? { id: found.id, name: found.name } : null };
       })
       .sort((a, b) => b.member.createdAt.getTime() - a.member.createdAt.getTime());
   }
@@ -171,13 +175,18 @@ class InMemoryProjectMembersRepository implements ProjectMembersRepository {
 
     const row: ProjectMemberRow = {
       ...data,
+      functionId: data.functionId ?? null,
       createdAt: new Date(),
     };
     this.store.members.push(row);
     return row;
   }
 
-  async updateRole(memberId: string, role: ProjectMemberRole) {
+  async findFunction(functionId: string) {
+    return this.store.memberFunctions?.find((row) => row.id === functionId) ?? null;
+  }
+
+  async updateRole(memberId: string, role: ProjectMemberRole, functionId?: string | null) {
     const index = this.store.members.findIndex((row) => row.id === memberId);
     const current = this.store.members[index];
     const duplicate = await this.findByProjectUserRole(
@@ -190,7 +199,7 @@ class InMemoryProjectMembersRepository implements ProjectMembersRepository {
       throw new UniqueConstraintError();
     }
 
-    const updated = { ...current, role };
+    const updated = { ...current, role, functionId: functionId ?? null };
     this.store.members[index] = updated;
     return updated;
   }

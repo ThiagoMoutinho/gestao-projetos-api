@@ -33,7 +33,13 @@ export type NewProjectMemberRecord = {
   projectId: string;
   userId: string;
   role: ProjectMemberRole;
+  /** Função do catálogo (só junto do acesso de Observador). */
+  functionId?: string | null;
 };
+
+/** Função de participante do catálogo institucional (rótulo, sem permissões próprias). */
+export type MemberFunctionSummary = { id: string; name: string };
+export type MemberFunctionRecord = MemberFunctionSummary & { isActive: boolean };
 
 export type UserMembership = {
   projectId: string;
@@ -43,6 +49,8 @@ export type UserMembership = {
 export type ProjectMemberWithUser = {
   member: ProjectMemberRow;
   user: UserRow;
+  /** Função do catálogo, quando houver. Ausente nos repositórios que não a carregam. */
+  fn?: MemberFunctionSummary | null;
 };
 
 export interface ProjectsRepository {
@@ -67,7 +75,9 @@ export interface ProjectMembersRepository {
     projectId: string,
   ): Promise<ProjectMemberRow | null>;
   create(data: NewProjectMemberRecord): Promise<ProjectMemberRow>;
-  updateRole(memberId: string, role: ProjectMemberRole): Promise<ProjectMemberRow>;
+  /** Troca o acesso e a função juntos (a função só pode existir com Observador; fora dele é limpa). */
+  updateRole(memberId: string, role: ProjectMemberRole, functionId?: string | null): Promise<ProjectMemberRow>;
+  findFunction(functionId: string): Promise<MemberFunctionRecord | null>;
   deleteById(memberId: string): Promise<void>;
   deleteOwnerRole(projectId: string, userId: string): Promise<void>;
   ensureOwnerMembership(
