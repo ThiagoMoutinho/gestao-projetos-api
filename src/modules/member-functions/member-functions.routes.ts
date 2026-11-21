@@ -1,4 +1,5 @@
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import { z } from "zod";
 
 import type { Database } from "../../db/types";
 import { getAuthUser, requireAuth } from "../../lib/session";
@@ -62,14 +63,36 @@ export function makeMemberFunctionsRoutes(useCases: MemberFunctionsUseCases): Fa
         schema: {
           operationId: "updateProjectMemberFunction",
           tags,
-          summary: "Ativar ou desativar uma função de participante (ADMIN e PMO)",
+          summary: "Editar, ativar ou desativar uma função de participante (ADMIN e PMO)",
+          description:
+            "Altera o nome e/ou a situação. O nome não pode ser de um papel fixo nem repetir outra função; função com nome de papel fixo não pode ser reativada.",
           security,
           params: memberFunctionParamsSchema,
           body: updateMemberFunctionBodySchema,
           response: { 200: memberFunctionSchema, ...memberFunctionErrorResponses },
         },
       },
-      (request) => useCases.setActive(getAuthUser(request), request.params.id, request.body.isActive),
+      (request) => useCases.update(getAuthUser(request), request.params.id, request.body),
+    );
+
+    app.delete(
+      "/project-member-functions/:id",
+      {
+        schema: {
+          operationId: "deleteProjectMemberFunction",
+          tags,
+          summary: "Excluir definitivamente uma função de participante (ADMIN e PMO)",
+          description:
+            "Só é possível se a função nunca foi atribuída (nenhum participante a tem e nenhum registro do histórico a cita). Havendo uso, responde 409 e a função só pode ser desativada.",
+          security,
+          params: memberFunctionParamsSchema,
+          response: { 204: z.undefined(), ...memberFunctionErrorResponses },
+        },
+      },
+      async (request, reply) => {
+        await useCases.remove(getAuthUser(request), request.params.id);
+        return reply.code(204).send();
+      },
     );
   };
 }

@@ -20,3 +20,25 @@ export function functionNameKey(name: string): string {
   }
   return out.replace(/[^a-z0-9]+/g, " ").trim();
 }
+
+/**
+ * Nomes dos papéis de acesso fixos (rótulos da lista e códigos). Uma função do catálogo não pode ter o mesmo nome de um papel,
+ * senão a lista de funções mostraria "Desenvolvedor" duas vezes (o papel e a "função").
+ */
+export const RESERVED_ROLE_NAMES = [
+  "Dono do projeto",
+  "Dono projeto",
+  "Gestor",
+  "PO",
+  "Responsável técnico",
+  "Desenvolvedor",
+  "Fornecedor",
+  "Observador",
+] as const;
+
+const RESERVED_KEYS = new Set(RESERVED_ROLE_NAMES.map((name) => functionNameKey(name)));
+
+/** O nome (ignorando caixa, acento e espaços) é o de um papel de acesso fixo? */
+export function isReservedFunctionName(name: string): boolean {
+  return RESERVED_KEYS.has(functionNameKey(name));
+}

@@ -16,3 +16,15 @@ export function isUniqueViolation(error: unknown): boolean {
   }
   return false;
 }
+
+/** Violação de chave estrangeira (23503), também embrulhada pelo Drizzle em `cause`. */
+export function isForeignKeyViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && typeof current === "object" && current !== null; depth += 1) {
+    if ("code" in current && current.code === "23503") {
+      return true;
+    }
+    current = "cause" in current ? current.cause : null;
+  }
+  return false;
+}
